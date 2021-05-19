@@ -1,0 +1,66 @@
+service: postgresql-init-custom-resource
+
+provider:
+  name: aws
+  runtime: java11
+  memorySize: 1024
+  timeout: 60
+  region: us-west-2
+  deploymentBucket:
+    name: ${env:BUCKET}
+    serverSideEncryption: "AES256"
+  logRetentionInDays: 7
+  iam:
+    deploymentRole: "arn:aws:iam::${env:ACCOUNT}:role/cloudformation/deployer/cloudformation-deployer"
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetResourcePolicy
+            - secretsmanager:GetSecretValue
+            - secretsmanager:DescribeSecret
+            - secretsmanager:ListSecretVersionIds
+            - secretsmanager:ListSecret
+          Resource:
+            - "*"
+  stackTags:
+    Creator: serverless
+    Environment: ${env:STAGE}
+    Project: ${self:service}
+    Team: platform
+    Visibility: internal
+  vpc:
+    subnetIds:
+      - ${env:SUBNET_ID}
+    securityGroupIds:
+      - ${env:SECURITY_GROUP}
+  lambdaHashingVersion: 20201221
+
+functions:
+  InitPostgresUser:
+    handler: com.dwolla.postgres.init.Handler
+    package:
+      artifact: ${env:USER_ARTIFACT_PATH}
+  InitPostgresDatabase:
+    handler: com.dwolla.postgres.init.Handler
+    package:
+      artifact: ${env:DATABASE_ARTIFACT_PATH}
+
+package:
+  individually: true
+
+resources:
+  Description: "CloudFormation custom resources for initializing PostgreSQL databases and users"
+  Outputs:
+    InitPostgresUserFunction:
+      Description: User initialization Lambda Function Service Token
+      Value:
+        'Fn::GetAtt': [InitPostgresUserLambdaFunction, Arn]
+      Export:
+        Name: ${self:service}:${env:STAGE}:InitPostgresUserArn
+    InitPostgresDatabaseFunction:
+      Description: Database initialization Lambda Function Service Token
+      Value:
+        'Fn::GetAtt': [InitPostgresDatabaseLambdaFunction, Arn]
+      Export:
+        Name: ${self:service}:${env:STAGE}:InitPostgresDatabaseArn
