@@ -23,8 +23,6 @@ inThisBuild(List(
   githubWorkflowPublish := Seq.empty,
 ))
 
-lazy val fs2AwsV = "2.0.0-M12"
-
 lazy val `postgresql-init-user` = (project in file("user"))
   .settings(
     maintainer := developers.value.head.email,
@@ -32,7 +30,7 @@ lazy val `postgresql-init-user` = (project in file("user"))
     libraryDependencies ++= {
       Seq(
         "com.dwolla" %% "scala-cloudformation-custom-resource" % "4.0.0-M3",
-        "com.dwolla" %% "fs2-aws-java-sdk2" % fs2AwsV,
+        "com.dwolla" %% "fs2-aws-java-sdk2" % "2.0.0-M12",
         "software.amazon.awssdk" % "secretsmanager" % "2.16.62",
       )
     },
@@ -67,7 +65,6 @@ lazy val `postgresql-init-core` = (project in file("core"))
         "io.circe" %% "circe-refined" % circeV,
         "io.estatico" %% "newtype" % "0.4.4",
         "org.tpolecat" %% "skunk-core" % "0.0.24",
-        "com.dwolla" %% "fs2-aws" % fs2AwsV,
         "org.typelevel" %% "log4cats-slf4j" % "1.3.1",
         "org.scalameta" %% "munit" % munitV % Test,
         "org.scalameta" %% "munit-scalacheck" % munitV % Test,

@@ -1,0 +1,46 @@
+stages:
+  build:
+    nodeLabel: sbt
+    steps:
+      - sbt universal:packageBin
+    filesToStash:
+      - '**'
+  deployDevInt:
+    nodeLabel: nvm-sbt-deployer
+    steps:
+      - |
+        export ACCOUNT=455620323323
+        export STAGE=DevInt
+        export SUBNET_ID=subnet-43df2024
+        export SECURITY_GROUP=sg-3571664c
+        export BUCKET=dwolla-code
+        . ${NVM_DIR}/nvm.sh --no-use
+        nvm install
+        npm install -g npm && npm install -g serverless
+        sbt deploy
+  deployUat:
+    nodeLabel: nvm-sbt-deployer
+    steps:
+      - |
+        export ACCOUNT=455620323323
+        export STAGE=Uat
+        export SUBNET_ID=subnet-e0db6887
+        export SECURITY_GROUP=sg-7d4f3b05
+        export BUCKET=dwolla-code
+        . ${NVM_DIR}/nvm.sh --no-use
+        nvm install
+        npm install -g npm && npm install -g serverless
+        sbt deploy
+  deployProd:
+    nodeLabel: nvm-sbt-deployer
+    steps:
+      - |
+        export ACCOUNT=455620323323
+        export STAGE=Prod
+        export SUBNET_ID=subnet-a475cec3
+        export SECURITY_GROUP=sg-27d7975f
+        export BUCKET=dwolla-code
+        . ${NVM_DIR}/nvm.sh --no-use
+        nvm install
+        npm install -g npm && npm install -g serverless
+        sbt deploy
