@@ -6,6 +6,7 @@ provider:
   memorySize: 1024
   timeout: 60
   region: us-west-2
+  stage: ${env:STAGE}
   deploymentBucket:
     name: ${env:BUCKET}
     serverSideEncryption: "AES256"
