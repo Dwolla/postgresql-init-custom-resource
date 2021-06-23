@@ -5,10 +5,12 @@ import cats.data._
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
-import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats._
 import skunk._
 import skunk.codec.all._
 import skunk.implicits._
+
+import scala.concurrent.duration._
 
 trait UserRepository[F[_]] {
   def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): F[Username]
@@ -16,7 +18,9 @@ trait UserRepository[F[_]] {
 }
 
 object UserRepository {
-  def apply[F[_] : BracketThrow : Logger]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : BracketThrow : Logger : Timer]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
+    private implicit def kleisliLogger[A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
+
     override def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
       for {
         upsert <- determineCommandFor(userConnectionInfo.user, userConnectionInfo.password)
@@ -44,16 +48,29 @@ object UserRepository {
         .void
     }
 
-    override def removeUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
-      Kleisli {
+    private def removeUser(user: Username, retries: Int): Kleisli[F, Session[F], Username] =
+      Kleisli[F, Session[F], Username] {
         _
-          .execute(UserQueries.removeUser(userConnectionInfo.user))
+          .execute(UserQueries.removeUser(user))
           .flatTap { completion =>
-            Logger[F].info(s"removed user ${userConnectionInfo.user} with status $completion")
+            Logger[F].info(s"removed user $user with status $completion")
           }
-          .as(userConnectionInfo.user)
-          .recoverUndefinedAs(userConnectionInfo.user)
+          .as(user)
+          .recoverUndefinedAs(user)
       }
+        .recoverWith {
+          case SqlState.DependentObjectsStillExist(ex) if retries > 0 =>
+            for {
+              _ <- Logger[Kleisli[F, Session[F], *]].warn(ex)(s"Failed when removing $user")
+              _ <- Timer[Kleisli[F, Session[F], *]].sleep(5.seconds)
+              user <- removeUser(user, retries - 1)
+            } yield user
+          case SqlState.DependentObjectsStillExist(ex) if retries == 0 =>
+            Kleisli.liftF(DependentObjectsStillExistButRetriesAreExhausted(user.value, ex).raiseError[F, Username])
+        }
+
+    override def removeUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
+      removeUser(userConnectionInfo.user, 5)
   }
 }
 
@@ -76,6 +93,6 @@ object UserQueries {
       .command
 
   def removeUser(username: Username): Command[Void] =
-    sql"DROP USER #${username.value}"
+    sql"DROP USER IF EXISTS #${username.value}"
       .command
 }

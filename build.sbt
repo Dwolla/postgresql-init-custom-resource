@@ -1,27 +1,27 @@
-inThisBuild(List(
-  organization := "com.dwolla",
-  description := "CloudFormation custom resource to initialize a PostgreSQL database with a new user",
-  homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource")),
-  licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
-  scalaVersion := "2.13.5",
-  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.11.3" cross CrossVersion.full),
-  addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-  scalacOptions += "-Ymacro-annotations",
-  developers := List(
-    Developer(
-      "bpholt",
-      "Brian Holt",
-      "bholt+postgres-init-custom-resource@dwolla.com",
-      url("https://dwolla.com")
-    ),
+ThisBuild / organization := "com.dwolla"
+ThisBuild / description := "CloudFormation custom resource to initialize a PostgreSQL database with a new user"
+ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
+ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
+ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / scalacOptions += "-Ymacro-annotations"
+ThisBuild / developers := List(
+  Developer(
+    "bpholt",
+    "Brian Holt",
+    "bholt+postgres-init-custom-resource@dwolla.com",
+    url("https://dwolla.com")
   ),
-  startYear := Option(2021),
+)
+ThisBuild / startYear := Option(2021)
+ThisBuild / libraryDependencies ++= Seq(
+  compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.0" cross CrossVersion.full),
+  compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
+)
 
-  githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11"),
-  githubWorkflowTargetTags ++= Seq("v*"),
-  githubWorkflowPublishTargetBranches := Seq.empty,
-  githubWorkflowPublish := Seq.empty,
-))
+ThisBuild / githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11")
+ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
+ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
+ThisBuild / githubWorkflowPublish := Seq.empty
 
 lazy val `postgresql-init-user` = (project in file("user"))
   .settings(
@@ -54,7 +54,7 @@ lazy val `postgresql-init-database` = (project in file("db"))
 lazy val `postgresql-init-core` = (project in file("core"))
   .settings(
     libraryDependencies ++= {
-      val circeV = "0.13.0"
+      val circeV = "0.14.0"
       val munitV = "0.7.26"
 
       Seq(
@@ -64,8 +64,9 @@ lazy val `postgresql-init-core` = (project in file("core"))
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
         "io.estatico" %% "newtype" % "0.4.4",
-        "org.tpolecat" %% "skunk-core" % "0.0.24",
+        "org.tpolecat" %% "skunk-core" % "0.0.28",
         "org.typelevel" %% "log4cats-slf4j" % "1.3.1",
+        "com.chuusai" %% "shapeless" % "2.3.7",
         "org.scalameta" %% "munit" % munitV % Test,
         "org.scalameta" %% "munit-scalacheck" % munitV % Test,
       )
