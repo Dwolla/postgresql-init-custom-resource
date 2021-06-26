@@ -5,6 +5,7 @@ import cats.data._
 import cats.effect._
 import cats.syntax.all._
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
+import eu.timepit.refined.api.Refined
 import org.typelevel.log4cats._
 import skunk._
 import skunk.codec.all._
@@ -14,10 +15,13 @@ import scala.concurrent.duration._
 
 trait UserRepository[F[_]] {
   def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): F[Username]
-  def removeUser(userConnectionInfo: UserConnectionInfo): F[Username]
+  def removeUser(username: Username): F[Username]
 }
 
 object UserRepository {
+  def usernameForDatabase(database: Database): Username =
+    Username(Refined.unsafeApply(database.value))
+
   def apply[F[_] : BracketThrow : Logger : Timer]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private implicit def kleisliLogger[A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
 
@@ -69,8 +73,8 @@ object UserRepository {
             Kleisli.liftF(DependentObjectsStillExistButRetriesAreExhausted(user.value, ex).raiseError[F, Username])
         }
 
-    override def removeUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
-      removeUser(userConnectionInfo.user, 5)
+    override def removeUser(username: Username): Kleisli[F, Session[F], Username] =
+      removeUser(username, 5)
   }
 }
 

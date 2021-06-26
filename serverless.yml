@@ -38,10 +38,6 @@ provider:
   lambdaHashingVersion: 20201221
 
 functions:
-  InitPostgresUser:
-    handler: com.dwolla.postgres.init.Handler
-    package:
-      artifact: ${env:USER_ARTIFACT_PATH}
   InitPostgresDatabase:
     handler: com.dwolla.postgres.init.Handler
     package:

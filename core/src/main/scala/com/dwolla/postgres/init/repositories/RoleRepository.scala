@@ -115,7 +115,7 @@ object RoleQueries {
 
   def revokeRole(userName: Username,
                  role: RoleName): Command[Void] =
-    sql"REVOKE #${role.value} FROM #${userName.value}"
+    sql"REVOKE #${userName.value} FROM #${role.value}"
       .command
 
   val countRoleByName: Query[RoleName, Long] =
