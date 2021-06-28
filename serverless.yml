@@ -49,12 +49,6 @@ package:
 resources:
   Description: "CloudFormation custom resources for initializing PostgreSQL databases and users"
   Outputs:
-    InitPostgresUserFunction:
-      Description: User initialization Lambda Function Service Token
-      Value:
-        'Fn::GetAtt': [InitPostgresUserLambdaFunction, Arn]
-      Export:
-        Name: ${self:service}:${env:STAGE}:InitPostgresUserArn
     InitPostgresDatabaseFunction:
       Description: Database initialization Lambda Function Service Token
       Value:
