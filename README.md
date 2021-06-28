@@ -25,10 +25,12 @@ Deploy the whole thing with `sbt deploy`.
 ## Database Initialization
 
 The database initialization resource takes in `DatabaseName`, `Host`, `Port`,
-`MasterDatabaseUsername`, and `MasterDatabasePassword` parameters, and returns
-the name of the database it created as the Physical Resource ID. It also creates 
-a role for use with the database (using the template `{DatabaseName}_role` for 
-the role name).
+`MasterDatabaseUsername`, `MasterDatabasePassword`, and `UserConnectionSecret` 
+Secrets Manager secret ID parameters, and returns the name of the database it 
+created as the Physical Resource ID. It also creates a role for use with the 
+database (using the template `{DatabaseName}_role` for the role name) and a 
+user with which to connect to the database (using the database name as
+the username).
 
 ```json
 "DatabaseMydb": {
@@ -42,33 +44,12 @@ the role name).
     "MasterDatabasePassword": {
       "Ref": "MasterDatabasePassword"
     },
+    "UserConnectionSecrets": [
+      {"Ref": "PasswordForMydbUser1"}
+    ],
     "ServiceToken": {
       "Fn::ImportValue": "postgresql-init-custom-resource:Stage:InitPostgresDatabaseArn"
     }
-  },
-  "Type": "AWS::CloudFormation::CustomResource"
-},
-```
-
-## User Initialization
-
-The user initialization resource takes in a `Database` name, `UserConnectionSecret` Secrets Manager secret ID, 
-`MasterDatabaseUsername`, and `MasterDatabasePassword` parameters, and returns the username of the user as the Physical
-Resource ID. The user is granted the role created by the database initialization resource.
-
-```json
-"DatabaseUserMydbUser1": {
-  "DependsOn": [
-    "PasswordForMydbUser1"
-  ],
-  "Properties": {
-    "Database": "mydb",
-    "MasterDatabasePassword": {"Ref": "MasterDatabasePassword"},
-    "MasterDatabaseUsername": {"Ref": "MasterDatabaseUser"},
-    "ServiceToken": {
-      "Fn::ImportValue": "postgresql-init-custom-resource:Stage:InitPostgresUserArn"
-    },
-    "UserConnectionSecret": {"Ref": "PasswordForMydbUser1"}
   },
   "Type": "AWS::CloudFormation::CustomResource"
 },
@@ -100,6 +81,7 @@ Here's an example of a CloudFormation template using the custom resources:
     },
     "DatabaseMydb": {
       "DependsOn": [
+        "PasswordForMydbUser1",
         "RdsServiceDatabase"
       ],
       "Properties": {
@@ -122,24 +104,12 @@ Here's an example of a CloudFormation template using the custom resources:
             "Endpoint.Port"
           ]
         },
+        "UserConnectionSecrets": [
+          {"Ref": "PasswordForMydbUser1"}
+        ],
         "ServiceToken": {
           "Fn::ImportValue": "postgresql-init-custom-resource:Stage:InitPostgresDatabaseArn"
         }
-      },
-      "Type": "AWS::CloudFormation::CustomResource"
-    },
-    "DatabaseUserMydbUser1": {
-      "DependsOn": [
-        "PasswordForMydbUser1"
-      ],
-      "Properties": {
-        "Database": "mydb",
-        "MasterDatabasePassword": {"Ref": "MasterDatabasePassword"},
-        "MasterDatabaseUsername": {"Ref": "MasterDatabaseUser"},
-        "ServiceToken": {
-          "Fn::ImportValue": "postgresql-init-custom-resource:Stage:InitPostgresUserArn"
-        },
-        "UserConnectionSecret": {"Ref": "PasswordForMydbUser1"}
       },
       "Type": "AWS::CloudFormation::CustomResource"
     },

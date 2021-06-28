@@ -34,7 +34,8 @@ abstract class CreateUpdateDeleteHandler[F[_] : BracketThrow : CreateSkunkSessio
 }
 
 case class DatabaseConnectionInfo(host: Host,
-                            port: Port,
-                            username: MasterDatabaseUsername,
-                            password: MasterDatabasePassword,
-                           )
+                                  port: Port,
+                                  username: MasterDatabaseUsername,
+                                  password: MasterDatabasePassword,
+                                  secretIds: List[SecretId],
+                                 )
