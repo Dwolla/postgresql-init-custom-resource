@@ -52,6 +52,7 @@ object CreateSkunkSession {
                           (implicit `[]`: BracketThrow[F]): F[A] =
       fa.recover {
         case SqlState.UndefinedObject(_) => a
+        case SqlState.InvalidCatalogName(_) => a
       }
   }
 
