@@ -1,14 +1,14 @@
 package com.dwolla.postgres.init
 package repositories
 
-import cats.effect._
 import cats.data._
+import cats.effect._
 import cats.syntax.all._
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
+import org.typelevel.log4cats.Logger
 import skunk._
 import skunk.codec.all._
 import skunk.implicits._
-import org.typelevel.log4cats.Logger
 
 trait DatabaseRepository[F[_]] {
   def createDatabase(db: DatabaseMetadata): F[Database]
@@ -16,7 +16,7 @@ trait DatabaseRepository[F[_]] {
 }
 
 object DatabaseRepository {
-  def apply[F[_] : BracketThrow : Logger]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
+  def apply[F[_] : MonadCancelThrow : Logger]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
     override def createDatabase(db: DatabaseMetadata): Kleisli[F, Session[F], Database] =
       checkDatabaseExists(db)
         .ifM(createDatabase(db.name, db.username), Logger[F].mapK(Kleisli.liftK[F, Session[F]]).info(s"No-op: database ${db.name} already exists"))

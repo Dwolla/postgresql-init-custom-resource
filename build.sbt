@@ -32,9 +32,6 @@ lazy val `postgresql-init-database` = (project in file("db"))
     topLevelDirectory := None,
     libraryDependencies ++= {
       Seq(
-        "com.dwolla" %% "scala-cloudformation-custom-resource" % "4.0.0-M3",
-        "com.dwolla" %% "fs2-aws-java-sdk2" % "2.0.0-M12",
-        "software.amazon.awssdk" % "secretsmanager" % "2.16.104",
         "org.scalameta" %% "munit" % munitV % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
       )
@@ -47,13 +44,13 @@ lazy val `postgresql-init-core` = (project in file("core"))
   .settings(
     libraryDependencies ++= {
       Seq(
-        "com.dwolla" %% "scala-cloudformation-custom-resource" % "4.0.0-M3",
+        "org.typelevel" %% "feral-cloudformation-custom-resource" % "0.1-ee0e26a-SNAPSHOT",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
         "io.estatico" %% "newtype" % "0.4.4",
-        "org.tpolecat" %% "skunk-core" % "0.0.28",
-        "org.typelevel" %% "log4cats-slf4j" % "1.3.1",
+        "org.tpolecat" %% "skunk-core" % "0.2.2",
+        "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
         "com.chuusai" %% "shapeless" % "2.3.7",
         "org.scalameta" %% "munit" % munitV % Test,
         "org.scalameta" %% "munit-scalacheck" % munitV % Test,

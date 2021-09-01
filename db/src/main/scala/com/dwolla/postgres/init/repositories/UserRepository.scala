@@ -22,7 +22,7 @@ object UserRepository {
   def usernameForDatabase(database: Database): Username =
     Username(Refined.unsafeApply(database.value))
 
-  def apply[F[_] : BracketThrow : Logger : Timer]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : Logger : Temporal]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private implicit def kleisliLogger[A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
 
     override def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
@@ -66,7 +66,7 @@ object UserRepository {
           case SqlState.DependentObjectsStillExist(ex) if retries > 0 =>
             for {
               _ <- Logger[Kleisli[F, Session[F], *]].warn(ex)(s"Failed when removing $user")
-              _ <- Timer[Kleisli[F, Session[F], *]].sleep(5.seconds)
+              _ <- Temporal[Kleisli[F, Session[F], *]].sleep(5.seconds)
               user <- removeUser(user, retries - 1)
             } yield user
           case SqlState.DependentObjectsStillExist(ex) if retries == 0 =>

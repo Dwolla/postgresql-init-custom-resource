@@ -1,33 +1,42 @@
 package com.dwolla.postgres.init
 
-import cats.data.Kleisli
 import cats.effect._
+import cats.effect.std.Console
 import cats.syntax.all._
-import com.dwolla.lambda.cloudformation._
-import com.dwolla.postgres.init.aws.SecretsManagerAlg
+import com.dwolla.postgres.init.aws.{ResourceNotFoundException, SecretsManagerAlg}
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
 import com.dwolla.postgres.init.repositories._
+import feral.cloudformation.{CloudFormationCustomResource, CloudFormationCustomResourceHandler, CloudFormationCustomResourceRequest, HandlerResponse, PhysicalResourceId, tagPhysicalResourceId}
+import fs2.io.net.Network
+import natchez.Trace
 import natchez.Trace.Implicits.noop
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
-import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException
 
-class PostgresqlDatabaseInitHandler[F[_] : BracketThrow : CreateSkunkSession : Logger](secretsManagerAlg: Resource[F, SecretsManagerAlg[F]],
-                                                                                       databaseRepository: DatabaseRepository[InSession[F, *]],
-                                                                                       roleRepository: RoleRepository[InSession[F, *]],
-                                                                                       userRepository: UserRepository[InSession[F, *]]
-                                                                                      )
-  extends CreateUpdateDeleteHandler[F, DatabaseMetadata] {
+class PostgresqlDatabaseInitHandler extends CloudFormationCustomResourceHandler[Logger[IO], DatabaseMetadata, Unit] {
+  override def cfnSetup: Resource[IO, Logger[IO]] = Resource.eval(Slf4jLogger.create[IO])
 
+  override def handler(setup: Logger[IO]): CloudFormationCustomResource[IO, DatabaseMetadata, Unit] = {
+    implicit val L: Logger[IO] = setup
+    new PostgresqlDatabaseInitHandlerImpl[IO](
+      SecretsManagerAlg.resource[IO],
+      DatabaseRepository[IO],
+      RoleRepository[IO],
+      UserRepository[IO],
+    )
+  }
+}
+
+class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Console : Logger](secretsManagerAlg: Resource[F, SecretsManagerAlg[F]],
+                                                                                                databaseRepository: DatabaseRepository[InSession[F, *]],
+                                                                                                roleRepository: RoleRepository[InSession[F, *]],
+                                                                                                userRepository: UserRepository[InSession[F, *]],
+                                                                                               ) extends CloudFormationCustomResource[F, DatabaseMetadata, Unit] {
   private def databaseAsPhysicalResourceId(db: Database): PhysicalResourceId =
     tagPhysicalResourceId(db.value)
 
-  override protected def extractRequestProperties(req: CloudFormationCustomResourceRequest): F[(DatabaseMetadata, DatabaseConnectionInfo)] =
-    ExtractRequestProperties[F](req).fproduct(_.migrateTo[DatabaseConnectionInfo])
-
-  override protected def handleCreateOrUpdate(input: DatabaseMetadata): InSession[F, PhysicalResourceId] =
+  private def createOrUpdate(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, PhysicalResourceId] =
     for {
-      userPasswords <- Kleisli.liftF(secretsManagerAlg.use(sm => input.secretIds.traverse(sm.getSecretAs[UserConnectionInfo])))
       db <- databaseRepository.createDatabase(input)
       _ <- roleRepository.createRole(input.name)
       _ <- userPasswords.traverse { userPassword =>
@@ -35,14 +44,11 @@ class PostgresqlDatabaseInitHandler[F[_] : BracketThrow : CreateSkunkSession : L
       }
     } yield databaseAsPhysicalResourceId(db)
 
-  override protected def handleDelete(input: DatabaseMetadata): InSession[F, PhysicalResourceId] =
-    for {
-      usernames <- Kleisli.liftF(getUsernamesFromSecrets(input.secretIds, UserRepository.usernameForDatabase(input.name)))
-      _ <- usernames.traverse(roleRepository.removeUserFromRole(_, input.name))
-      db <- databaseRepository.removeDatabase(input.name)
-      _ <- roleRepository.removeRole(input.name)
-      _ <- usernames.traverse(userRepository.removeUser)
-    } yield databaseAsPhysicalResourceId(db)
+  def handleCreateOrUpdate(input: DatabaseMetadata)
+                          (f: List[UserConnectionInfo] => InSession[F, PhysicalResourceId]): F[PhysicalResourceId] =
+    secretsManagerAlg.use(sm => input.secretIds.traverse(sm.getSecretAs[UserConnectionInfo])).flatMap { userPasswords =>
+      f(userPasswords).inSession(input.host, input.port, input.username, input.password)
+    }
 
   private def getUsernamesFromSecrets(secretIds: List[SecretId], fallback: Username): F[List[Username]] =
     secretsManagerAlg.use { sm =>
@@ -56,18 +62,22 @@ class PostgresqlDatabaseInitHandler[F[_] : BracketThrow : CreateSkunkSession : L
           }
       }
     }
-}
 
-class Handler extends IOCustomResourceHandler {
-  override def handleRequest(req: CloudFormationCustomResourceRequest): IO[HandlerResponse] =
-    Slf4jLogger.create[IO].flatMap { implicit l =>
-      Blocker[IO].use { blocker =>
-        new PostgresqlDatabaseInitHandler[IO](
-          SecretsManagerAlg.resource[IO](blocker),
-          DatabaseRepository[IO],
-          RoleRepository[IO],
-          UserRepository[IO],
-        ).handleRequest(req)
-      }
-    }
+  override def createResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[Unit]] =
+    handleCreateOrUpdate(event.ResourceProperties)(createOrUpdate(_, event.ResourceProperties)).map(HandlerResponse(_, None))
+
+  override def updateResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[Unit]] =
+    handleCreateOrUpdate(event.ResourceProperties)(createOrUpdate(_, event.ResourceProperties)).map(HandlerResponse(_, None))
+
+  override def deleteResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[Unit]] =
+    getUsernamesFromSecrets(event.ResourceProperties.secretIds, UserRepository.usernameForDatabase(event.ResourceProperties.name))
+      .flatMap { usernames =>
+        (for {
+          _ <- usernames.traverse(roleRepository.removeUserFromRole(_, event.ResourceProperties.name))
+          db <- databaseRepository.removeDatabase(event.ResourceProperties.name)
+          _ <- roleRepository.removeRole(event.ResourceProperties.name)
+          _ <- usernames.traverse(userRepository.removeUser)
+        } yield databaseAsPhysicalResourceId(db)).inSession(event.ResourceProperties.host, event.ResourceProperties.port, event.ResourceProperties.username, event.ResourceProperties.password)
+      }.map(HandlerResponse(_, None))
+
 }

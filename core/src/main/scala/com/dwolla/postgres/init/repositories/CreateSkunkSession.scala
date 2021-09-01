@@ -1,14 +1,15 @@
 package com.dwolla.postgres.init
 package repositories
 
+import cats.MonadThrow
 import cats.data._
 import cats.effect._
+import cats.effect.std.Console
 import cats.syntax.all._
+import fs2.io.net.Network
 import natchez.Trace
 import skunk._
 import skunk.util.Typer
-
-import scala.concurrent.duration._
 
 trait CreateSkunkSession[F[_]] {
   def single(host: String,
@@ -17,11 +18,11 @@ trait CreateSkunkSession[F[_]] {
              database: String,
              password: Option[String] = none,
              debug: Boolean = false,
-             readTimeout: FiniteDuration = Int.MaxValue.seconds,
-             writeTimeout: FiniteDuration = 5.seconds,
              strategy: Typer.Strategy = Typer.Strategy.BuiltinsOnly,
              ssl: SSL = SSL.None,
              parameters: Map[String, String] = Session.DefaultConnectionParameters,
+             commandCache: Int = 1024,
+             queryCache: Int = 1024,
             ): Resource[F, Session[F]]
 }
 
@@ -36,7 +37,7 @@ object CreateSkunkSession {
                  )
                  (implicit
                   `🦨`: CreateSkunkSession[F],
-                  `[]`: BracketThrow[F]): F[A] =
+                  `[]`: MonadCancelThrow[F]): F[A] =
       CreateSkunkSession[F].single(
         host = host.value,
         port = port.value,
@@ -49,7 +50,7 @@ object CreateSkunkSession {
 
   implicit class IgnoreErrorOps[F[_], A](val fa: F[A]) extends AnyVal {
     def recoverUndefinedAs(a: A)
-                          (implicit `[]`: BracketThrow[F]): F[A] =
+                          (implicit `[]`: MonadThrow[F]): F[A] =
       fa.recover {
         case SqlState.UndefinedObject(_) => a
         case SqlState.InvalidCatalogName(_) => a
@@ -58,6 +59,6 @@ object CreateSkunkSession {
 
   def apply[F[_] : CreateSkunkSession]: CreateSkunkSession[F] = implicitly
 
-  implicit def instance[F[_] : Concurrent : ContextShift : Trace]: CreateSkunkSession[F] =
-    Session.single
+  implicit def instance[F[_] : Concurrent : Trace : Network : Console]: CreateSkunkSession[F] =
+    Session.single _
 }

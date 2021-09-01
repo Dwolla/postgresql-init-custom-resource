@@ -23,7 +23,7 @@ object RoleRepository {
   def roleNameForDatabase(database: Database): RoleName =
     RoleName(Refined.unsafeApply(database.value + "_role"))
 
-  def apply[F[_] : BracketThrow : Logger]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : MonadCancelThrow : Logger]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
     override def createRole(database: Database): Kleisli[F, Session[F], Unit] = {
       val role = roleNameForDatabase(database)
 
