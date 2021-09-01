@@ -2,11 +2,15 @@ package com.dwolla.postgres.init
 package repositories
 
 import cats.data._
-import cats.effect._
+import cats.effect.{Trace => _, _}
 import cats.syntax.all._
+import cats.tagless.Derive
+import cats.tagless.aop.Instrument
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
+import com.dwolla.tracing._
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto._
+import natchez.Trace
 import org.typelevel.log4cats.Logger
 import skunk._
 import skunk.codec.all._
@@ -20,10 +24,12 @@ trait RoleRepository[F[_]] {
 }
 
 object RoleRepository {
+  implicit val RoleRepositoryInstrument: Instrument[RoleRepository] = Derive.instrument
+
   def roleNameForDatabase(database: Database): RoleName =
     RoleName(Refined.unsafeApply(database.value + "_role"))
 
-  def apply[F[_] : BracketThrow : Logger]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : MonadCancelThrow : Logger : Trace]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
     override def createRole(database: Database): Kleisli[F, Session[F], Unit] = {
       val role = roleNameForDatabase(database)
 
@@ -102,7 +108,7 @@ object RoleRepository {
         .void
         .recoverUndefinedAs(())
     }
-  }
+  }.withTracing
 }
 
 object RoleQueries {

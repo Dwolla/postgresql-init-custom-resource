@@ -1,6 +1,6 @@
 package com.dwolla.postgres.init
 
-import io.circe.JsonObject
+import io.circe.Decoder
 import io.circe.literal._
 import eu.timepit.refined.auto._
 
@@ -22,7 +22,7 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
              }"""
 
     assertEquals(
-      input.as[JsonObject].flatMap(DatabaseMetadata(_)),
+      Decoder[DatabaseMetadata].decodeJson(input),
       Right(DatabaseMetadata(
         Host("database-hostname"),
         Port(5432),
