@@ -23,7 +23,7 @@ ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
-lazy val munitV = "0.7.26"
+lazy val munitV = "0.7.29"
 lazy val circeV = "0.14.1"
 
 lazy val `postgresql-init-database` = (project in file("db"))
