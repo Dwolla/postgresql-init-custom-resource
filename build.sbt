@@ -44,7 +44,7 @@ lazy val `postgresql-init-core` = (project in file("core"))
   .settings(
     libraryDependencies ++= {
       Seq(
-        "org.typelevel" %% "feral-cloudformation-custom-resource" % "0.1-ee0e26a-SNAPSHOT",
+        "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % "0.1-2f1129b-SNAPSHOT",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
