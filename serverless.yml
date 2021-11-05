@@ -33,8 +33,7 @@ provider:
   vpc:
     subnetIds:
       - ${env:SUBNET_ID}
-    securityGroupIds:
-      - ${env:SECURITY_GROUP}
+    securityGroupIds: !Split [",", "${env:SECURITY_GROUPS}"]
   lambdaHashingVersion: 20201221
 
 functions:
