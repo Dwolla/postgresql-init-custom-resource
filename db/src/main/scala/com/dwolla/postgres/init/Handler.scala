@@ -1,33 +1,75 @@
 package com.dwolla.postgres.init
 
+import cats._
+import cats.data._
 import cats.effect._
-import cats.effect.std.Console
+import cats.effect.kernel.Resource
+import cats.effect.std.{Console, Random}
 import cats.syntax.all._
 import com.dwolla.postgres.init.aws.{ResourceNotFoundException, SecretsManagerAlg}
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
 import com.dwolla.postgres.init.repositories._
-import feral.lambda.Context
+import feral.lambda
+import feral.lambda.{Context, IOLambda, Lambda}
 import feral.lambda.cloudformation._
+import feral.lambda.tracing.XRayKleisliTracedLambda
 import fs2.io.net.Network
-import natchez.Trace
-import natchez.Trace.Implicits.noop
-import org.http4s.client.Client
+import natchez.{Kernel, Span, Trace, TraceValue}
+import natchez.xray._
+import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-class PostgresqlDatabaseInitHandler extends IOCloudFormationCustomResourceHandler[DatabaseMetadata, Unit] {
-  override def handler(client: Client[IO]): Resource[IO, CloudFormationCustomResource[IO, DatabaseMetadata, Unit]] =
-    Resource.eval(Slf4jLogger.create[IO]).flatMap { implicit logger =>
-      SecretsManagerAlg.resource[IO]
-        .map {
-          new PostgresqlDatabaseInitHandlerImpl[IO](
-            _,
-            DatabaseRepository[IO],
-            RoleRepository[IO],
-            UserRepository[IO],
-          )
+import java.net.URI
+
+class PostgresqlDatabaseInitHandler extends IOLambda[CloudFormationCustomResourceRequest[DatabaseMetadata], Unit] {
+  private def tracedHandler: Resource[Kleisli[IO, Span[IO], *], Lambda[Kleisli[IO, Span[IO], *], CloudFormationCustomResourceRequest[DatabaseMetadata], Unit]] =
+    EmberClientBuilder
+      .default[Kleisli[IO, Span[IO], *]]
+      .build
+      .flatMap {
+        CloudFormationCustomResource(_) {
+          Resource.eval(Slf4jLogger.create[Kleisli[IO, Span[IO], *]])
+            .flatMap { implicit logger =>
+              SecretsManagerAlg.resource[Kleisli[IO, Span[IO], *]]
+                .map {
+                  new PostgresqlDatabaseInitHandlerImpl[Kleisli[IO, Span[IO], *]](
+                    _,
+                    DatabaseRepository[Kleisli[IO, Span[IO], *]],
+                    RoleRepository[Kleisli[IO, Span[IO], *]],
+                    UserRepository[Kleisli[IO, Span[IO], *]],
+                  )
+                }
+            }
+        }
+      }
+
+  override def run: Resource[IO, lambda.Lambda[IO, CloudFormationCustomResourceRequest[DatabaseMetadata], Unit]] =
+    Resource.eval(Random.scalaUtilRandom[IO]).flatMap { implicit random =>
+      Resource.eval(XRayEnvironment[IO].daemonAddress)
+        .flatMap {
+          case Some(addr) => XRay.entryPoint[IO](addr)
+          case None => XRay.entryPoint[IO]()
+        }
+        .flatMap { entrypoint =>
+          tracedHandler
+            .map { l =>
+              val toTrace = new XRayKleisliTracedLambda[IO, CloudFormationCustomResourceRequest[DatabaseMetadata]]
+              toTrace(entrypoint, Kleisli.liftK)(l)
+            }
+            .mapK(Kleisli.applyK(new NoOpSpan[IO]))
         }
     }
+
+}
+
+class NoOpSpan[F[_] : Applicative] extends Span[F] {
+  override def put(fields: (String, TraceValue)*): F[Unit] = ().pure[F]
+  override def kernel: F[Kernel] = Kernel(Map.empty).pure[F]
+  override def span(name: String): Resource[F, Span[F]] = Resource.pure[F, Span[F]](this)
+  override def traceId: F[Option[String]] = none[String].pure[F]
+  override def spanId: F[Option[String]] = none[String].pure[F]
+  override def traceUri: F[Option[URI]] = none[URI].pure[F]
 }
 
 class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Console : Logger](secretsManagerAlg: SecretsManagerAlg[F],
