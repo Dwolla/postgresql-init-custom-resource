@@ -2,10 +2,14 @@ package com.dwolla.postgres.init
 package repositories
 
 import cats.data._
-import cats.effect._
+import cats.effect.{Trace => _, _}
 import cats.syntax.all._
+import cats.tagless.Derive
+import cats.tagless.aop.Instrument
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
+import com.dwolla.tracing._
 import eu.timepit.refined.api.Refined
+import natchez.Trace
 import org.typelevel.log4cats._
 import skunk._
 import skunk.codec.all._
@@ -19,10 +23,12 @@ trait UserRepository[F[_]] {
 }
 
 object UserRepository {
+  implicit val UserRepositoryInstrument: Instrument[UserRepository] = Derive.instrument
+
   def usernameForDatabase(database: Database): Username =
     Username(Refined.unsafeApply(database.value))
 
-  def apply[F[_] : Logger : Temporal]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : Logger : Temporal : Trace]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private implicit def kleisliLogger[A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
 
     override def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
@@ -75,7 +81,7 @@ object UserRepository {
 
     override def removeUser(username: Username): Kleisli[F, Session[F], Username] =
       removeUser(username, 5)
-  }
+  }.withTracing
 }
 
 object UserQueries {
