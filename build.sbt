@@ -2,7 +2,7 @@ ThisBuild / organization := "com.dwolla"
 ThisBuild / description := "CloudFormation custom resource to initialize a PostgreSQL database with a new user"
 ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
 ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
-ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / scalaVersion := "2.13.7"
 ThisBuild / scalacOptions += "-Ymacro-annotations"
 ThisBuild / developers := List(
   Developer(
@@ -23,8 +23,8 @@ ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
-lazy val munitV = "0.7.26"
-lazy val circeV = "0.14.0"
+lazy val munitV = "0.7.29"
+lazy val circeV = "0.14.1"
 
 lazy val `postgresql-init-database` = (project in file("db"))
   .settings(
@@ -34,7 +34,7 @@ lazy val `postgresql-init-database` = (project in file("db"))
       Seq(
         "com.dwolla" %% "scala-cloudformation-custom-resource" % "4.0.0-M3",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "2.0.0-M12",
-        "software.amazon.awssdk" % "secretsmanager" % "2.16.62",
+        "software.amazon.awssdk" % "secretsmanager" % "2.16.104",
         "org.scalameta" %% "munit" % munitV % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
       )
