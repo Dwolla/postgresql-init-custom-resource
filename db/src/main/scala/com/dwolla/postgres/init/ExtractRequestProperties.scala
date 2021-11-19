@@ -1,10 +1,9 @@
 package com.dwolla.postgres.init
 
-import cats.data.EitherNel
 import cats.syntax.all._
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.refined._
-import io.circe.{Decoder, JsonObject}
+import io.circe.{Decoder, HCursor}
 
 case class DatabaseMetadata(host: Host,
                             port: Port,
@@ -14,35 +13,16 @@ case class DatabaseMetadata(host: Host,
                             secretIds: List[SecretId],
                            )
 
-object DatabaseMetadata extends ((Host, Port, Database, MasterDatabaseUsername, MasterDatabasePassword, List[SecretId]) => DatabaseMetadata) {
-  implicit def DatabaseMetadataDecoder: Decoder[DatabaseMetadata] = ???
-
-  def apply(props: JsonObject): EitherNel[InvalidInputException, DatabaseMetadata] =
-    (
-      FindProperty[Host]("Host"),
-      FindProperty[Port]("Port"),
-      FindProperty[Database]("DatabaseName"),
-      FindProperty[MasterDatabaseUsername]("MasterDatabaseUsername"),
-      FindProperty[MasterDatabasePassword]("MasterDatabasePassword"),
-      FindProperty[List[SecretId]]("UserConnectionSecrets"),
-      )
-      .applyAll(props)
-      .parMapN(DatabaseMetadata(_, _, _, _, _, _))
+object DatabaseMetadata {
+  implicit val DecodeDatabaseMetadata: Decoder[DatabaseMetadata] = (c: HCursor) =>
+    (c.downField("Host").as[Host],
+      c.downField("Port").as[Port],
+      c.downField("DatabaseName").as[Database],
+      c.downField("MasterDatabaseUsername").as[MasterDatabaseUsername],
+      c.downField("MasterDatabasePassword").as[MasterDatabasePassword],
+      c.downField("UserConnectionSecrets").as[List[SecretId]],
+      ).mapN(DatabaseMetadata.apply)
 }
-
-//object ExtractRequestProperties {
-//  def apply[F[_] : MonadThrow : Logger](req: CloudFormationCustomResourceRequest): F[DatabaseMetadata] =
-//    req
-//      .ResourceProperties
-//      .toRightNel(InvalidInputException("Missing ResourceProperties"))
-//      .flatMap(DatabaseMetadata(_))
-//      .leftMap(InvalidInputsException(_))
-//      .liftTo[F]
-//      .flatTap {
-//        case DatabaseMetadata(host, port, name, username, _, _) =>
-//          Logger[F].info(s"Received request to create $name on $username@$host:$port")
-//      }
-//}
 
 case class UserConnectionInfo(database: Database,
                               host: Host,
