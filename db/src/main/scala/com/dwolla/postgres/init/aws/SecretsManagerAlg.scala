@@ -2,6 +2,8 @@ package com.dwolla.postgres.init
 package aws
 
 import cats.effect.{Trace => _, _}
+import cats.tagless.Derive
+import cats.tagless.aop.Instrument
 import io.circe.Decoder
 import natchez.Trace
 import org.typelevel.log4cats.Logger
@@ -12,7 +14,9 @@ trait SecretsManagerAlg[F[_]] {
 }
 
 object SecretsManagerAlg {
-  def resource[F[_] : Sync : Logger : Trace]: Resource[F, SecretsManagerAlg[F]] = ???
+  implicit val SecretsManagerAlgInstrumentation: Instrument[SecretsManagerAlg] = Derive.instrument
+
+  def resource[F[_] : Sync : Logger, G[_] : Trace]: Resource[F, SecretsManagerAlg[G]] = ???
 //    Resource.fromAutoCloseable(Sync[F].delay(SecretsManagerAsyncClient.builder().build()))
 //      .map(SecretsManagerAlg[F](_))
 //

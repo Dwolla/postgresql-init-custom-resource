@@ -43,9 +43,13 @@ lazy val `postgresql-init-database` = (project in file("db"))
 lazy val `postgresql-init-core` = (project in file("core"))
   .settings(
     libraryDependencies ++= {
+      val natchezVersion = "0.1.5+60-ff9224f1-SNAPSHOT"
+      val feralVersion = "0.1-5a99f02-SNAPSHOT"
+
       Seq(
-        "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % "0.1-18e1226",
-        "org.tpolecat" %% "natchez-xray" % "0.1.5+51-eac456af+20211118-1616-SNAPSHOT",
+        "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
+        "org.typelevel" %% "feral-lambda-natchez" % feralVersion,
+        "org.tpolecat" %% "natchez-xray" % natchezVersion,
         "org.tpolecat" %% "natchez-http4s" % "0.2.0",
         "org.typelevel" %% "cats-tagless-macros" % "0.14.0",
         "io.circe" %% "circe-parser" % circeV,

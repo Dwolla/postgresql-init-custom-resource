@@ -1,55 +1,74 @@
 package com.dwolla.postgres.init
 
+import cats._
 import cats.data._
-import cats.effect._
-import cats.effect.kernel.Resource
-import cats.effect.std.Console
+import cats.effect.std.{Console, Random}
+import cats.effect.{Trace => _, _}
 import cats.syntax.all._
+import com.dwolla.postgres.init.PostgresqlDatabaseInitHandler.nothingEncoder
 import com.dwolla.postgres.init.aws.{ResourceNotFoundException, SecretsManagerAlg}
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
 import com.dwolla.postgres.init.repositories._
-import feral.lambda
-import feral.lambda.IOLambda._
 import feral.lambda.cloudformation._
-import feral.lambda.tracing._
-import feral.lambda.{Context, IOLambda}
+import feral.lambda.natchez.TracedLambda
+import feral.lambda.{IOLambda, LambdaEnv}
 import fs2.INothing
 import fs2.io.net.Network
+import io.circe.Encoder
+import natchez._
 import natchez.http4s.NatchezMiddleware
-import natchez.{Span, Trace}
+import natchez.xray.XRay
 import org.http4s.client.{Client, middleware}
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-class PostgresqlDatabaseInitHandler extends IOLambda[CloudFormationCustomResourceRequest[DatabaseMetadata], INothing] {
-  private def httpClient[F[_] : Async : Trace]: Resource[F, Client[F]] =
+import scala.annotation.nowarn
+
+object PostgresqlDatabaseInitHandler {
+  //noinspection NotImplementedCode
+  @nowarn("msg=dead code following this construct")
+  implicit val nothingEncoder: Encoder[INothing] = _ => ???
+}
+
+class PostgresqlDatabaseInitHandler extends IOLambda[CloudFormationCustomResourceRequest[DatabaseMetadata], Unit] {
+  private implicit def kleisliLogger[F[_] : Logger, A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
+
+  private implicit def kleisliLambdaEnv[F[_] : Functor, A, B](implicit env: LambdaEnv[F, A]): LambdaEnv[Kleisli[F, B, *], A] =
+    env.mapK(Kleisli.liftK)
+
+  private def httpClient[F[_] : Async]: Resource[F, Client[F]] =
     EmberClientBuilder
       .default[F]
       .build
       .map(middleware.Logger[F](logHeaders = true, logBody = false))
-      .map(NatchezMiddleware.client(_))
 
-  private def handler[F[_] : Async : Console : Trace]: Resource[F, lambda.Lambda[F, CloudFormationCustomResourceRequest[DatabaseMetadata], INothing]] =
-      httpClient[F].flatMap {
-        CloudFormationCustomResource(_) {
-          Resource.eval(Slf4jLogger.create[F])
-            .flatMap { implicit logger =>
-              SecretsManagerAlg.resource[F]
-                .map {
-                  new PostgresqlDatabaseInitHandlerImpl(
-                    _,
-                    DatabaseRepository[F],
-                    RoleRepository[F],
-                    UserRepository[F],
-                  )
-                }
-            }
+  private def resources[F[_] : Async : Console]: Resource[F, LambdaEnv[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] => F[Option[Unit]]] =
+    Resource.eval(Slf4jLogger.create[F]).flatMap { implicit logger =>
+      for {
+        client <- httpClient[F]
+        entryPoint <- Resource.eval(Random.scalaUtilRandom[F]).flatMap { implicit r => XRay.entryPoint[F]() }
+        secretsManager <- SecretsManagerAlg.resource[F, Kleisli[F, Span[F], *]]
+      } yield Kleisli { implicit env: LambdaEnv[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] =>
+        TracedLambda[F, CloudFormationCustomResourceRequest[DatabaseMetadata], Unit](entryPoint) { span =>
+          val tracedClient = NatchezMiddleware.client(client.translate(Kleisli.liftK[F, Span[F]])(Kleisli.applyK(span)))
+          CloudFormationCustomResource(tracedClient, PostgresqlDatabaseInitHandlerImpl(secretsManager)).run(span)
         }
-      }
+      }.run
+    }
 
-  override def run: Resource[IO, lambda.Lambda[IO, CloudFormationCustomResourceRequest[DatabaseMetadata], INothing]] =
-    XRayTracedLambda(handler[Kleisli[IO, Span[IO], *]])
+  override def handler: Resource[IO, LambdaEnv[IO, CloudFormationCustomResourceRequest[DatabaseMetadata]] => IO[Option[Unit]]] =
+    resources[IO]
+}
+
+object PostgresqlDatabaseInitHandlerImpl {
+  def apply[F[_] : Temporal : Trace : Network : Console : Logger](secretsManager: SecretsManagerAlg[F]): PostgresqlDatabaseInitHandlerImpl[F] =
+    new PostgresqlDatabaseInitHandlerImpl(
+      secretsManager,
+      DatabaseRepository[F],
+      RoleRepository[F],
+      UserRepository[F],
+    )
 }
 
 class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Console : Logger](secretsManagerAlg: SecretsManagerAlg[F],
@@ -87,13 +106,13 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
         }
     }
 
-  override def createResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata], context: Context[F]): F[HandlerResponse[INothing]] =
+  override def createResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[INothing]] =
     handleCreateOrUpdate(event.ResourceProperties)(createOrUpdate(_, event.ResourceProperties)).map(HandlerResponse(_, None))
 
-  override def updateResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata], context: Context[F]): F[HandlerResponse[INothing]] =
+  override def updateResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[INothing]] =
     handleCreateOrUpdate(event.ResourceProperties)(createOrUpdate(_, event.ResourceProperties)).map(HandlerResponse(_, None))
 
-  override def deleteResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata], context: Context[F]): F[HandlerResponse[INothing]] =
+  override def deleteResource(event: CloudFormationCustomResourceRequest[DatabaseMetadata]): F[HandlerResponse[INothing]] =
     for {
       usernames <- getUsernamesFromSecrets(event.ResourceProperties.secretIds, UserRepository.usernameForDatabase(event.ResourceProperties.name))
       dbId <- removeUsersFromDatabase(usernames, event.ResourceProperties.name).inSession(event.ResourceProperties.host, event.ResourceProperties.port, event.ResourceProperties.username, event.ResourceProperties.password)
