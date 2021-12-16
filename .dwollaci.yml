@@ -12,7 +12,6 @@ stages:
         export ACCOUNT=455620323323
         export STAGE=Admin
         export SUBNET_ID=subnet-f97c829d
-        export SECURITY_GROUPS=sg-0244214d0550b066b
         export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
@@ -25,7 +24,6 @@ stages:
         export ACCOUNT=455620323323
         export STAGE=DevInt
         export SUBNET_ID=subnet-43df2024
-        export SECURITY_GROUPS=sg-3571664c,sg-0584685202cafa726
         export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
@@ -38,7 +36,6 @@ stages:
         export ACCOUNT=455620323323
         export STAGE=Uat
         export SUBNET_ID=subnet-e0db6887
-        export SECURITY_GROUPS=sg-7d4f3b05,sg-0cbe6ae6668c6e403
         export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
@@ -51,7 +48,6 @@ stages:
         export ACCOUNT=455620323323
         export STAGE=Prod
         export SUBNET_ID=subnet-a475cec3
-        export SECURITY_GROUPS=sg-27d7975f,sg-0f5eaaccf99390e89
         export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
