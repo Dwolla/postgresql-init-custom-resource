@@ -52,7 +52,7 @@ lazy val `postgresql-init-core` = (project in file("core"))
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
         "io.estatico" %% "newtype" % "0.4.4",
-        "org.tpolecat" %% "skunk-core" % "0.0.28",
+        "org.tpolecat" %% "skunk-core" % "0.2.3",
         "org.typelevel" %% "log4cats-slf4j" % "1.3.1",
         "com.chuusai" %% "shapeless" % "2.3.7",
         "org.scalameta" %% "munit" % munitV % Test,
