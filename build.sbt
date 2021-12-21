@@ -33,7 +33,7 @@ lazy val `postgresql-init-database` = (project in file("db"))
     libraryDependencies ++= {
       Seq(
         "com.dwolla" %% "scala-cloudformation-custom-resource" % "4.0.0-M3",
-        "com.dwolla" %% "fs2-aws-java-sdk2" % "2.0.0-M12",
+        "com.dwolla" %% "fs2-aws-java-sdk2" % "2.0.0-M16",
         "software.amazon.awssdk" % "secretsmanager" % "2.16.104",
         "org.scalameta" %% "munit" % munitV % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
