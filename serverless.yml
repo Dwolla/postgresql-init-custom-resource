@@ -39,7 +39,7 @@ provider:
 
 functions:
   InitPostgresDatabase:
-    handler: com.dwolla.postgres.init.Handler
+    handler: com.dwolla.postgres.init.PostgresqlDatabaseInitHandler
     package:
       artifact: ${env:DATABASE_ARTIFACT_PATH}
 
