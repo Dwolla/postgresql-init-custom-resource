@@ -116,12 +116,12 @@ object RoleQueries {
 
   def grantRole(userName: Username,
                 role: RoleName): Command[Void] =
-    sql"GRANT #${userName.value} TO #${role.value}"
+    sql"GRANT #${role.value} TO #${userName.value}"
       .command
 
   def revokeRole(userName: Username,
                  role: RoleName): Command[Void] =
-    sql"REVOKE #${userName.value} FROM #${role.value}"
+    sql"REVOKE #${role.value} FROM #${userName.value}"
       .command
 
   val countRoleByName: Query[RoleName, Long] =
