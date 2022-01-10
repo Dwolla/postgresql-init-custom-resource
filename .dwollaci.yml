@@ -9,47 +9,31 @@ stages:
     nodeLabel: nvm-sbt-deployer
     steps:
       - |
-        export ACCOUNT=455620323323
-        export STAGE=Admin
-        export SUBNET_ID=subnet-f97c829d
-        export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
         npm install -g npm && npm install -g serverless
-        sbt deploy
+        sbt "deploy Admin"
   deployDevInt:
     nodeLabel: nvm-sbt-deployer
     steps:
       - |
-        export ACCOUNT=455620323323
-        export STAGE=DevInt
-        export SUBNET_ID=subnet-43df2024
-        export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
         npm install -g npm && npm install -g serverless
-        sbt deploy
+        sbt "deploy DevInt"
   deployUat:
     nodeLabel: nvm-sbt-deployer
     steps:
       - |
-        export ACCOUNT=455620323323
-        export STAGE=Uat
-        export SUBNET_ID=subnet-e0db6887
-        export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
         npm install -g npm && npm install -g serverless
-        sbt deploy
+        sbt "deploy Uat"
   deployProd:
     nodeLabel: nvm-sbt-deployer
     steps:
       - |
-        export ACCOUNT=455620323323
-        export STAGE=Prod
-        export SUBNET_ID=subnet-a475cec3
-        export BUCKET=dwolla-code
         . ${NVM_DIR}/nvm.sh --no-use
         nvm install
         npm install -g npm && npm install -g serverless
-        sbt deploy
+        sbt "deploy Prod"

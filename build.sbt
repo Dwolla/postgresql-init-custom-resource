@@ -59,19 +59,20 @@ lazy val `postgresql-init-core` = (project in file("."))
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
 
-lazy val serverlessDeployCommand = settingKey[String]("serverless command to deploy the application")
- serverlessDeployCommand := "serverless deploy --verbose"
+lazy val serverlessDeployCommand = settingKey[Seq[String]]("serverless command to deploy the application")
+serverlessDeployCommand := "serverless deploy --verbose".split(' ').toSeq
 
-lazy val deploy = taskKey[Int]("deploy to AWS")
-deploy := Def.task {
+lazy val deploy = inputKey[Int]("deploy to AWS")
+deploy := Def.inputTask {
   import scala.sys.process._
 
+  val baseCommand = serverlessDeployCommand.value
   val exitCode = Process(
-    serverlessDeployCommand.value,
+    baseCommand ++ Seq("--stage", Stage.parser.parsed.name),
     Option((`postgresql-init-core` / baseDirectory).value),
     "DATABASE_ARTIFACT_PATH" -> (`postgresql-init-core` / Universal / packageBin).value.toString,
   ).!
 
   if (exitCode == 0) exitCode
   else throw new IllegalStateException("Serverless returned a non-zero exit code. Please check the logs for more information.")
-}.value
+}.evaluated
