@@ -27,7 +27,7 @@ provider:
             - "*"
   stackTags:
     Creator: serverless
-    Environment: ${opt:STAGE}
+    Environment: ${opt:stage}
     Project: ${self:service}
     Team: platform
     Visibility: internal
@@ -52,9 +52,9 @@ resources:
     LambdaSg:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: Traffic source security group for ${opt:STAGE} postgres-init-lambda
+        GroupDescription: Traffic source security group for ${opt:stage} postgres-init-lambda
         VpcId:
-          Fn::ImportValue: ${opt:STAGE}VpcId
+          Fn::ImportValue: ${opt:stage}VpcId
         Tags:
           - Key: SecurityGroupType
             Value: TrafficSource
@@ -65,10 +65,10 @@ resources:
       Value:
         'Fn::GetAtt': [InitPostgresDatabaseLambdaFunction, Arn]
       Export:
-        Name: ${self:service}:${opt:STAGE}:InitPostgresDatabaseArn
+        Name: ${self:service}:${opt:stage}:InitPostgresDatabaseArn
     InitPostgresDatabaseSg:
       Description: Secrutiy group attached to database initialization Lambda Function
       Value:
         !GetAtt LambdaSg.GroupId
       Export:
-        Name: ${self:service}:${opt:STAGE}:InitPostgresDatabaseSgId
+        Name: ${self:service}:${opt:stage}:InitPostgresDatabaseSgId
