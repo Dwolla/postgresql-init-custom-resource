@@ -26,7 +26,7 @@ ThisBuild / githubWorkflowPublish := Seq.empty
 lazy val munitV = "0.7.29"
 lazy val circeV = "0.14.1"
 
-lazy val `postgresql-init-core` = (project in file("core"))
+lazy val `postgresql-init-core` = (project in file("."))
   .settings(
     maintainer := developers.value.head.email,
     topLevelDirectory := None,
@@ -57,9 +57,6 @@ lazy val `postgresql-init-core` = (project in file("core"))
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
 
-lazy val `postgresql-init-custom-resource-root` = (project in file("."))
-  .aggregate(`postgresql-init-core`)
-
 lazy val serverlessDeployCommand = settingKey[String]("serverless command to deploy the application")
  serverlessDeployCommand := "serverless deploy --verbose"
 
@@ -69,7 +66,7 @@ deploy := Def.task {
 
   val exitCode = Process(
     serverlessDeployCommand.value,
-    Option((`postgresql-init-custom-resource-root` / baseDirectory).value),
+    Option((`postgresql-init-core` / baseDirectory).value),
     "DATABASE_ARTIFACT_PATH" -> (`postgresql-init-core` / Universal / packageBin).value.toString,
   ).!
 
