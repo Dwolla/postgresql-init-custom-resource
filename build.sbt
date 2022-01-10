@@ -18,7 +18,7 @@ ThisBuild / libraryDependencies ++= Seq(
   compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
 )
 
-ThisBuild / githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11")
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("8"), JavaSpec.temurin("11"))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
