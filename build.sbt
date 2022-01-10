@@ -18,7 +18,7 @@ ThisBuild / libraryDependencies ++= Seq(
   compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
 )
 
-ThisBuild / githubWorkflowJavaVersions := Seq("adopt@1.8", "adopt@1.11")
+ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("8"), JavaSpec.temurin("11"))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
@@ -26,7 +26,7 @@ ThisBuild / githubWorkflowPublish := Seq.empty
 lazy val munitV = "0.7.29"
 lazy val circeV = "0.14.1"
 
-lazy val `postgresql-init-core` = (project in file("core"))
+lazy val `postgresql-init-core` = (project in file("."))
   .settings(
     maintainer := developers.value.head.email,
     topLevelDirectory := None,
@@ -46,6 +46,8 @@ lazy val `postgresql-init-core` = (project in file("core"))
         "io.estatico" %% "newtype" % "0.4.4",
         "org.tpolecat" %% "skunk-core" % "0.2.2",
         "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
+        "com.amazonaws" % "aws-lambda-java-log4j2" % "1.5.1",
+        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
         "com.chuusai" %% "shapeless" % "2.3.7",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC1",
         "software.amazon.awssdk" % "secretsmanager" % "2.17.104",
@@ -57,22 +59,20 @@ lazy val `postgresql-init-core` = (project in file("core"))
   )
   .enablePlugins(UniversalPlugin, JavaAppPackaging)
 
-lazy val `postgresql-init-custom-resource-root` = (project in file("."))
-  .aggregate(`postgresql-init-core`)
+lazy val serverlessDeployCommand = settingKey[Seq[String]]("serverless command to deploy the application")
+serverlessDeployCommand := "serverless deploy --verbose".split(' ').toSeq
 
-lazy val serverlessDeployCommand = settingKey[String]("serverless command to deploy the application")
- serverlessDeployCommand := "serverless deploy --verbose"
-
-lazy val deploy = taskKey[Int]("deploy to AWS")
-deploy := Def.task {
+lazy val deploy = inputKey[Int]("deploy to AWS")
+deploy := Def.inputTask {
   import scala.sys.process._
 
+  val baseCommand = serverlessDeployCommand.value
   val exitCode = Process(
-    serverlessDeployCommand.value,
-    Option((`postgresql-init-custom-resource-root` / baseDirectory).value),
+    baseCommand ++ Seq("--stage", Stage.parser.parsed.name),
+    Option((`postgresql-init-core` / baseDirectory).value),
     "DATABASE_ARTIFACT_PATH" -> (`postgresql-init-core` / Universal / packageBin).value.toString,
   ).!
 
   if (exitCode == 0) exitCode
   else throw new IllegalStateException("Serverless returned a non-zero exit code. Please check the logs for more information.")
-}.value
+}.evaluated

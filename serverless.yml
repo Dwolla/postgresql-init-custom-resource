@@ -1,4 +1,6 @@
 service: postgresql-init-custom-resource
+useDotenv: true
+variablesResolutionMode: 20210326
 
 provider:
   name: aws
@@ -6,7 +8,6 @@ provider:
   memorySize: 1024
   timeout: 60
   region: us-west-2
-  stage: ${env:STAGE}
   deploymentBucket:
     name: ${env:BUCKET}
     serverSideEncryption: "AES256"
@@ -26,7 +27,7 @@ provider:
             - "*"
   stackTags:
     Creator: serverless
-    Environment: ${env:STAGE}
+    Environment: ${opt:STAGE}
     Project: ${self:service}
     Team: platform
     Visibility: internal
@@ -51,9 +52,9 @@ resources:
     LambdaSg:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: Traffic source security group for ${env:STAGE} postgres-init-lambda
+        GroupDescription: Traffic source security group for ${opt:STAGE} postgres-init-lambda
         VpcId:
-          Fn::ImportValue: ${env:STAGE}VpcId
+          Fn::ImportValue: ${opt:STAGE}VpcId
         Tags:
           - Key: SecurityGroupType
             Value: TrafficSource
@@ -64,10 +65,10 @@ resources:
       Value:
         'Fn::GetAtt': [InitPostgresDatabaseLambdaFunction, Arn]
       Export:
-        Name: ${self:service}:${env:STAGE}:InitPostgresDatabaseArn
+        Name: ${self:service}:${opt:STAGE}:InitPostgresDatabaseArn
     InitPostgresDatabaseSg:
       Description: Secrutiy group attached to database initialization Lambda Function
       Value:
         !GetAtt LambdaSg.GroupId
       Export:
-        Name: ${self:service}:${env:STAGE}:InitPostgresDatabaseSgId
+        Name: ${self:service}:${opt:STAGE}:InitPostgresDatabaseSgId
