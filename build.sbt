@@ -64,11 +64,13 @@ serverlessDeployCommand := "serverless deploy --verbose".split(' ').toSeq
 
 lazy val deploy = inputKey[Int]("deploy to AWS")
 deploy := Def.inputTask {
-  import scala.sys.process._
+  import scala.sys.process.Process
 
-  val baseCommand = serverlessDeployCommand.value
+  val commandParts = serverlessDeployCommand.value ++ Seq("--stage", Stage.parser.parsed.name)
+  streams.value.log.log(Level.Info, commandParts.mkString(" "))
+
   val exitCode = Process(
-    baseCommand ++ Seq("--stage", Stage.parser.parsed.name),
+    commandParts,
     Option((`postgresql-init-core` / baseDirectory).value),
     "DATABASE_ARTIFACT_PATH" -> (`postgresql-init-core` / Universal / packageBin).value.toString,
   ).!
