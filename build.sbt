@@ -33,7 +33,7 @@ lazy val `postgresql-init-core` = (project in file("."))
     resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= {
       val natchezVersion = "0.1.6"
-      val feralVersion = "0.1-288f0f5-SNAPSHOT"
+      val feralVersion = "0.1-b2e99d0-SNAPSHOT"
 
       Seq(
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,

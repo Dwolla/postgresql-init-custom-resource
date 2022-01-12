@@ -1,8 +1,10 @@
 package com.dwolla.postgres.init
 
+import cats._
 import cats.effect.std.Console
 import cats.effect.{Trace => _, _}
 import cats.syntax.all._
+import com.dwolla.postgres.init.PostgresqlDatabaseInitHandlerImpl.databaseAsPhysicalResourceId
 import com.dwolla.postgres.init.aws.{ResourceNotFoundException, SecretsManagerAlg}
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
 import com.dwolla.postgres.init.repositories._
@@ -29,17 +31,15 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
       dbId <- removeUsersFromDatabase(usernames, event.name).inSession(event.host, event.port, event.username, event.password)
     } yield HandlerResponse(dbId, None)
 
-  private def databaseAsPhysicalResourceId(db: Database): PhysicalResourceId =
-    PhysicalResourceId(db.value)
-
   private def createOrUpdate(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, PhysicalResourceId] =
     for {
-      db <- databaseRepository.createDatabase(input)
+      db <- databaseAsPhysicalResourceId[InSession[F, *]](input.name)
+      _ <- databaseRepository.createDatabase(input)
       _ <- roleRepository.createRole(input.name)
       _ <- userPasswords.traverse { userPassword =>
         userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database)
       }
-    } yield databaseAsPhysicalResourceId(db)
+    } yield db
 
   private def handleCreateOrUpdate(input: DatabaseMetadata)
                           (f: List[UserConnectionInfo] => InSession[F, PhysicalResourceId]): F[PhysicalResourceId] =
@@ -61,11 +61,12 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
 
   private def removeUsersFromDatabase(usernames: List[Username], databaseName: Database): InSession[F, PhysicalResourceId] =
     for {
+      db <- databaseAsPhysicalResourceId[InSession[F, *]](databaseName)
       _ <- usernames.traverse(roleRepository.removeUserFromRole(_, databaseName))
-      db <- databaseRepository.removeDatabase(databaseName)
+      _ <- databaseRepository.removeDatabase(databaseName)
       _ <- roleRepository.removeRole(databaseName)
       _ <- usernames.traverse(userRepository.removeUser)
-    } yield databaseAsPhysicalResourceId(db)
+    } yield db
 }
 
 object PostgresqlDatabaseInitHandlerImpl {
@@ -76,4 +77,7 @@ object PostgresqlDatabaseInitHandlerImpl {
       RoleRepository[F],
       UserRepository[F],
     )
+
+  private[PostgresqlDatabaseInitHandlerImpl] def databaseAsPhysicalResourceId[F[_] : ApplicativeThrow](db: Database): F[PhysicalResourceId] =
+    PhysicalResourceId(db.value).liftTo[F](new RuntimeException("Database name was invalid as Physical Resource ID"))
 }
