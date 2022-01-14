@@ -10,7 +10,7 @@ import feral.lambda.cloudformation._
 import feral.lambda.{INothing, IOLambda, KernelSource, LambdaEnv, TracedHandler}
 import natchez._
 import natchez.http4s.NatchezMiddleware
-import natchez.xray.XRay
+import natchez.xray.{XRay, XRayEnvironment}
 import org.http4s.client.{Client, middleware}
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
@@ -24,7 +24,10 @@ class PostgresqlDatabaseInitHandler
       implicit0(logger: Logger[F]) <- Resource.eval(Slf4jLogger.create[F])
       implicit0(random: Random[F]) <- Resource.eval(Random.scalaUtilRandom[F])
       client <- httpClient[F]
-      entryPoint <- XRay.entryPoint[F]()
+      entryPoint <- XRayEnvironment[Resource[F, *]].daemonAddress.flatMap {
+        case Some(addr) => XRay.entryPoint(addr)
+        case None => XRay.entryPoint[F]()
+      }
       secretsManager <- SecretsManagerAlg.resource[F].map(_.mapK(Kleisli.liftK[F, Span[F]]).withTracing)
     } yield { implicit env: LambdaEnv[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] =>
       TracedHandler(entryPoint, Kleisli { (span: Span[F]) =>
