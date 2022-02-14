@@ -45,7 +45,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
         "io.estatico" %% "newtype" % "0.4.4",
-        "org.tpolecat" %% "skunk-core" % "0.2.2",
+        "org.tpolecat" %% "skunk-core" % "0.3.0",
         "org.typelevel" %% "log4cats-slf4j" % "2.1.1",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.5.1",
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.1",
