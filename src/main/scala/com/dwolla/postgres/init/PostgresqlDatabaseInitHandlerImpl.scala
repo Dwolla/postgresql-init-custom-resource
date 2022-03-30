@@ -42,7 +42,7 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
     } yield db
 
   private def handleCreateOrUpdate(input: DatabaseMetadata)
-                          (f: List[UserConnectionInfo] => InSession[F, PhysicalResourceId]): F[PhysicalResourceId] =
+                                  (f: List[UserConnectionInfo] => InSession[F, PhysicalResourceId]): F[PhysicalResourceId] =
     for {
       userPasswords <- input.secretIds.traverse(secretsManagerAlg.getSecretAs[UserConnectionInfo])
       id <- f(userPasswords).inSession(input.host, input.port, input.username, input.password)
