@@ -9,6 +9,7 @@ import cats.tagless.aop.Instrument
 import com.dwolla.postgres.init.repositories.CreateSkunkSession._
 import com.dwolla.tracing._
 import eu.timepit.refined.api.Refined
+import eu.timepit.refined.refineV
 import natchez.Trace
 import org.typelevel.log4cats._
 import skunk._
@@ -41,10 +42,10 @@ object UserRepository {
                                     password: Password): Kleisli[F, Session[F], Command[Void]] = Kleisli {
       _
         .prepare(UserQueries.checkUserExists)
-        .use(_.unique(username))
+        .use(_.option(username))
         .flatMap {
-          case 0 => Logger[F].info(s"Creating user $username") >> UserQueries.createUser(username, password).pure[F]
-          case count => Logger[F].info(s"Found and updating $count user named $username") >> UserQueries.updateUser(username, password).pure[F]
+          case Some(_) => Logger[F].info(s"Found and updating user named $username").as(UserQueries.updateUser(username, password))
+          case None => Logger[F].info(s"Creating user $username").as(UserQueries.createUser(username, password))
         }
     }
 
@@ -85,12 +86,12 @@ object UserRepository {
 }
 
 object UserQueries {
-  private val narrowUsername: Username => String = a => a.value
+  private val username: skunk.Codec[Username] =
+    bpchar.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value)
 
-  val checkUserExists: Query[Username, Long] =
-    sql"SELECT count(*) as count FROM pg_catalog.pg_user u WHERE u.usename = $bpchar"
-      .query(int8)
-      .contramap(narrowUsername)
+  val checkUserExists: Query[Username, Username] =
+    sql"SELECT u.usename FROM pg_catalog.pg_user u WHERE u.usename = $username"
+      .query(username)
 
   def createUser(username: Username,
                  password: Password): Command[Void] =
