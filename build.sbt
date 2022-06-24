@@ -40,7 +40,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
         "org.tpolecat" %% "natchez-http4s" % "0.3.2",
         "org.typelevel" %% "cats-tagless-macros" % "0.14.0",
-        "org.http4s" %% "http4s-ember-client" % "0.23.11",
+        "org.http4s" %% "http4s-ember-client" % "0.23.12",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
