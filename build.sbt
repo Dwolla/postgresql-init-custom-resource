@@ -3,7 +3,6 @@ ThisBuild / description := "CloudFormation custom resource to initialize a Postg
 ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
 ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / scalacOptions += "-Ymacro-annotations"
 ThisBuild / developers := List(
   Developer(
     "bpholt",
@@ -44,7 +43,8 @@ lazy val `postgresql-init-core` = (project in file("."))
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
-        "io.estatico" %% "newtype" % "0.4.4",
+        "io.monix" %% "newtypes-core" % "0.2.3",
+        "io.monix" %% "newtypes-circe-v0-14" % "0.2.3",
         "org.tpolecat" %% "skunk-core" % "0.3.1",
         "org.typelevel" %% "log4cats-slf4j" % "2.3.2",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.5.1",

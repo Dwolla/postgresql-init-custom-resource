@@ -27,7 +27,7 @@ object UserRepository {
   implicit val UserRepositoryInstrument: Instrument[UserRepository] = Derive.instrument
 
   def usernameForDatabase(database: Database): Username =
-    Username(Refined.unsafeApply(database.value))
+    Username(Refined.unsafeApply(database.value.value))
 
   def apply[F[_] : Logger : Temporal : Trace]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private implicit def kleisliLogger[A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
@@ -77,7 +77,7 @@ object UserRepository {
               user <- removeUser(user, retries - 1)
             } yield user
           case SqlState.DependentObjectsStillExist(ex) if retries == 0 =>
-            Kleisli.liftF(DependentObjectsStillExistButRetriesAreExhausted(user.value, ex).raiseError[F, Username])
+            Kleisli.liftF(DependentObjectsStillExistButRetriesAreExhausted(user.value.value, ex).raiseError[F, Username])
         }
 
     override def removeUser(username: Username): Kleisli[F, Session[F], Username] =
@@ -87,7 +87,7 @@ object UserRepository {
 
 object UserQueries {
   private val username: skunk.Codec[Username] =
-    bpchar.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value)
+    bpchar.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value.value)
 
   val checkUserExists: Query[Username, Username] =
     sql"SELECT u.usename FROM pg_catalog.pg_user u WHERE u.usename = $username"
@@ -95,15 +95,15 @@ object UserQueries {
 
   def createUser(username: Username,
                  password: Password): Command[Void] =
-    sql"CREATE USER #${username.value} WITH PASSWORD '#${password.value}'"
+    sql"CREATE USER #${username.value.value} WITH PASSWORD '#${password.value.value}'"
       .command
 
   def updateUser(username: Username,
                  password: Password): Command[Void] =
-    sql"ALTER USER #${username.value} WITH PASSWORD '#${password.value}'"
+    sql"ALTER USER #${username.value.value} WITH PASSWORD '#${password.value.value}'"
       .command
 
   def removeUser(username: Username): Command[Void] =
-    sql"DROP USER IF EXISTS #${username.value}"
+    sql"DROP USER IF EXISTS #${username.value.value}"
       .command
 }
