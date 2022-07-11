@@ -116,12 +116,12 @@ object RoleQueries {
 
   def grantRole(userName: Username,
                 role: RoleName): Command[Void] =
-    sql"GRANT #${role.value} TO #${userName.value}"
+    sql"GRANT #${role.value.value} TO #${userName.value.value}"
       .command
 
   def revokeRole(userName: Username,
                  role: RoleName): Command[Void] =
-    sql"REVOKE #${role.value} FROM #${userName.value}"
+    sql"REVOKE #${role.value.value} FROM #${userName.value.value}"
       .command
 
   val countRoleByName: Query[RoleName, Long] =
@@ -130,19 +130,19 @@ object RoleQueries {
       .contramap(narrowRoleName)
 
   def createRole(role: RoleName): Command[Void] =
-    sql"CREATE ROLE #${role.value}"
+    sql"CREATE ROLE #${role.value.value}"
       .command
 
   def grantPrivilegesToRole(database: Database, role: RoleName): Command[Void] =
-    sql"GRANT ALL PRIVILEGES ON DATABASE #${database.value} TO #${role.value}"
+    sql"GRANT ALL PRIVILEGES ON DATABASE #${database.value.value} TO #${role.value.value}"
       .command
 
   def revokePrivilegesFromRole(database: Database, role: RoleName): Command[Void] =
-    sql"REVOKE ALL PRIVILEGES ON DATABASE #${database.value} FROM #${role.value}"
+    sql"REVOKE ALL PRIVILEGES ON DATABASE #${database.value.value} FROM #${role.value.value}"
       .command
 
   def dropRole(role: RoleName): Command[Void] =
-    sql"DROP ROLE IF EXISTS #${role.value}"
+    sql"DROP ROLE IF EXISTS #${role.value.value}"
       .command
 
 }

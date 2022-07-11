@@ -3,9 +3,8 @@ package com.dwolla.postgres
 import eu.timepit.refined._
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.string._
-import io.circe.Decoder
-import io.estatico.newtype.Coercible
-import io.estatico.newtype.macros.newtype
+import monix.newtypes.NewtypeWrapped
+import monix.newtypes.integrations.DerivedCirceCodec
 import shapeless.ops.hlist
 import shapeless.ops.tuple._
 import shapeless.syntax.std.tuple._
@@ -37,29 +36,33 @@ package object init {
   type SqlIdentifier = String Refined SqlIdentifierPredicate
   type GeneratedPasswordPredicate = MatchesRegex[W.`"""[-A-Za-z0-9!"#$%&()*+,./:<=>?@\\[\\]\\\\^_{|}~]+"""`.T]
   type GeneratedPassword = String Refined GeneratedPasswordPredicate
-  implicit def coercibleDecoder[A, B](implicit ev: Coercible[Decoder[A], Decoder[B]], d: Decoder[A]): Decoder[B] = ev(d)
 
-  @newtype case class MasterDatabaseUsername(id: SqlIdentifier) {
-    def value: String = id.value
-  }
-  @newtype case class MasterDatabasePassword(value: String)
-  @newtype case class SecretId(value: String)
+  type MasterDatabaseUsername = MasterDatabaseUsername.Type
+  object MasterDatabaseUsername extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
 
-  @newtype case class Host(value: String)
-  @newtype case class Port(value: Int)
+  type MasterDatabasePassword = MasterDatabasePassword.Type
+  object MasterDatabasePassword extends NewtypeWrapped[String] with DerivedCirceCodec
 
-  @newtype case class Username(id: SqlIdentifier) {
-    def value: String = id.value
-  }
-  @newtype case class Password(id: GeneratedPassword) {
-    def value: String = id.value
-  }
-  @newtype case class Database(id: SqlIdentifier) {
-    def value: String = id.value
-  }
-  @newtype case class RoleName(id: SqlIdentifier) {
-    def value: String = id.value
-  }
+  type SecretId = SecretId.Type
+  object SecretId extends NewtypeWrapped[String] with DerivedCirceCodec
+
+  type Host = Host.Type
+  object Host extends NewtypeWrapped[String] with DerivedCirceCodec
+
+  type Port = Port.Type
+  object Port extends NewtypeWrapped[Int] with DerivedCirceCodec
+
+  type Username = Username.Type
+  object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+
+  type Password = Password.Type
+  object Password extends NewtypeWrapped[GeneratedPassword] with DerivedCirceCodec
+
+  type Database = Database.Type
+  object Database extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+
+  type RoleName = RoleName.Type
+  object RoleName extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
 }
 
 package init {

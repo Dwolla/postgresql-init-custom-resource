@@ -60,7 +60,7 @@ object DatabaseRepository {
 }
 
 object DatabaseQueries {
-  private val narrowDatabase: Database => String = a => a.value
+  private val narrowDatabase: Database => String = a => a.value.value
 
   val checkDatabaseExists: Query[Database, Long] =
     sql"SELECT count(*) as count FROM pg_catalog.pg_database WHERE pg_database.datname = $bpchar"
@@ -68,10 +68,10 @@ object DatabaseQueries {
       .contramap(narrowDatabase)
 
   def createDatabase(database: Database, owner: MasterDatabaseUsername): Command[Void] =
-    sql"CREATE DATABASE #${database.value} OWNER #${owner.value}"
+    sql"CREATE DATABASE #${database.value.value} OWNER #${owner.value.value}"
       .command
 
   def dropDatabase(database: Database): Command[Void] =
-    sql"DROP DATABASE IF EXISTS #${database.value}"
+    sql"DROP DATABASE IF EXISTS #${database.value.value}"
       .command
 }

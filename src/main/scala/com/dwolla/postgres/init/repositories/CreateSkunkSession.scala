@@ -41,7 +41,7 @@ object CreateSkunkSession {
       CreateSkunkSession[F].single(
         host = host.value,
         port = port.value,
-        user = username.value,
+        user = username.value.value,
         database = "postgres",
         password = password.value.some,
         ssl = SSL.System,

@@ -3,7 +3,6 @@ ThisBuild / description := "CloudFormation custom resource to initialize a Postg
 ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
 ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / scalacOptions += "-Ymacro-annotations"
 ThisBuild / developers := List(
   Developer(
     "bpholt",
@@ -33,25 +32,26 @@ lazy val `postgresql-init-core` = (project in file("."))
     resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= {
       val natchezVersion = "0.1.6"
-      val feralVersion = "0.1.0-M8"
+      val feralVersion = "0.1.0-M13"
 
       Seq(
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
         "org.tpolecat" %% "natchez-http4s" % "0.3.2",
         "org.typelevel" %% "cats-tagless-macros" % "0.14.0",
-        "org.http4s" %% "http4s-ember-client" % "0.23.11",
+        "org.http4s" %% "http4s-ember-client" % "0.23.13",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-refined" % circeV,
-        "io.estatico" %% "newtype" % "0.4.4",
+        "io.monix" %% "newtypes-core" % "0.2.3",
+        "io.monix" %% "newtypes-circe-v0-14" % "0.2.3",
         "org.tpolecat" %% "skunk-core" % "0.3.1",
-        "org.typelevel" %% "log4cats-slf4j" % "2.3.1",
+        "org.typelevel" %% "log4cats-slf4j" % "2.3.2",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.5.1",
-        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.17.2",
+        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.18.0",
         "com.chuusai" %% "shapeless" % "2.3.9",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC1",
-        "software.amazon.awssdk" % "secretsmanager" % "2.17.189",
+        "software.amazon.awssdk" % "secretsmanager" % "2.17.228",
         "org.scalameta" %% "munit" % munitV % Test,
         "org.scalameta" %% "munit-scalacheck" % munitV % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
