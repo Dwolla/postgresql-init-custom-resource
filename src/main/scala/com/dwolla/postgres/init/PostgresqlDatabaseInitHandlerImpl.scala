@@ -22,10 +22,10 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
   override def createResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
     handleCreateOrUpdate(event)(createOrUpdate(_, event)).map(HandlerResponse(_, None))
 
-  override def updateResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
+  override def updateResource(event: DatabaseMetadata, physicalResourceId: PhysicalResourceId): F[HandlerResponse[INothing]] =
     handleCreateOrUpdate(event)(createOrUpdate(_, event)).map(HandlerResponse(_, None))
 
-  override def deleteResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
+  override def deleteResource(event: DatabaseMetadata, physicalResourceId: PhysicalResourceId): F[HandlerResponse[INothing]] =
     for {
       usernames <- getUsernamesFromSecrets(event.secretIds, UserRepository.usernameForDatabase(event.name))
       dbId <- removeUsersFromDatabase(usernames, event.name).inSession(event.host, event.port, event.username, event.password)
