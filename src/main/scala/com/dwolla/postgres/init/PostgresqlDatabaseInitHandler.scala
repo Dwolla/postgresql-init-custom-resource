@@ -49,7 +49,7 @@ class PostgresqlDatabaseInitHandler
     EmberClientBuilder
       .default[F]
       .build
-      .map(middleware.Logger[F](logHeaders = true, logBody = false))
+      .map(middleware.Logger[F](logHeaders = true, logBody = true))
 
   private def tracedHttpClient[F[_] : MonadCancelThrow](client: Client[F], span: Span[F]): Client[Kleisli[F, Span[F], *]] =
     NatchezMiddleware.client(client.translate(Kleisli.liftK[F, Span[F]])(Kleisli.applyK(span)))
