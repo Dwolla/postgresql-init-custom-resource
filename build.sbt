@@ -29,7 +29,6 @@ lazy val `postgresql-init-core` = (project in file("."))
   .settings(
     maintainer := developers.value.head.email,
     topLevelDirectory := None,
-    resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= {
       val natchezVersion = "0.1.6"
       val feralVersion = "0.1.0-M13"
