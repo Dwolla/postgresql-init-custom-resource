@@ -87,7 +87,7 @@ object UserRepository {
 
 object UserQueries {
   private val username: skunk.Codec[Username] =
-    bpchar.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value.value)
+    name.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value.value)
 
   val checkUserExists: Query[Username, Username] =
     sql"SELECT u.usename FROM pg_catalog.pg_user u WHERE u.usename = $username"
