@@ -50,7 +50,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.18.0",
         "com.chuusai" %% "shapeless" % "2.3.9",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC1",
-        "software.amazon.awssdk" % "secretsmanager" % "2.17.229",
+        "software.amazon.awssdk" % "secretsmanager" % "2.17.243",
         "org.scalameta" %% "munit" % munitV % Test,
         "org.scalameta" %% "munit-scalacheck" % munitV % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
