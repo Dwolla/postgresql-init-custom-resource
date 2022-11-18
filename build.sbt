@@ -23,7 +23,7 @@ ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
 lazy val munitV = "0.7.29"
-lazy val circeV = "0.14.2"
+lazy val circeV = "0.14.3"
 
 lazy val `postgresql-init-core` = (project in file("."))
   .settings(
