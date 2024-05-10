@@ -31,7 +31,7 @@ lazy val `postgresql-init-core` = (project in file("."))
     topLevelDirectory := None,
     libraryDependencies ++= {
       val natchezVersion = "0.1.6"
-      val feralVersion = "0.1.0-M13"
+      val feralVersion = "0.3.0"
 
       Seq(
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
