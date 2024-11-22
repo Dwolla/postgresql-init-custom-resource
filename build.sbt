@@ -47,7 +47,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.tpolecat" %% "skunk-core" % "0.3.1",
         "org.typelevel" %% "log4cats-slf4j" % "2.3.2",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.5.1",
-        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.18.0",
+        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.24.2",
         "com.chuusai" %% "shapeless" % "2.3.9",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC1",
         "software.amazon.awssdk" % "secretsmanager" % "2.17.229",
