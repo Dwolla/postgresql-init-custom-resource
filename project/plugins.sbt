@@ -1,4 +1,3 @@
-addSbtPlugin("io.github.davidgregory084" % "sbt-tpolecat" % "0.4.4")
-addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.2")
-addSbtPlugin("com.github.sbt" % "sbt-github-actions" % "0.28.0")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-settings" % "0.8.2")
+addSbtPlugin("org.typelevel" % "sbt-typelevel-mergify" % "0.8.2")
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.16")
