@@ -22,7 +22,6 @@ ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
-lazy val munitV = "1.2.1"
 lazy val circeV = "0.14.15"
 
 lazy val `postgresql-init-core` = (project in file("."))
@@ -51,8 +50,8 @@ lazy val `postgresql-init-core` = (project in file("."))
         "com.chuusai" %% "shapeless" % "2.3.13",
         "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC2",
         "software.amazon.awssdk" % "secretsmanager" % "2.17.295",
-        "org.scalameta" %% "munit" % munitV % Test,
-        "org.scalameta" %% "munit-scalacheck" % munitV % Test,
+        "org.scalameta" %% "munit" % "1.2.1" % Test,
+        "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
       )
     },
