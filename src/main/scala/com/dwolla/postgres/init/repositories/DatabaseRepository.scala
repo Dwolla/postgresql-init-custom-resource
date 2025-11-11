@@ -1,18 +1,18 @@
 package com.dwolla.postgres.init
 package repositories
 
-import cats.data._
-import cats.effect.{Trace => _, _}
-import cats.syntax.all._
+import cats.data.*
+import cats.effect.{Trace as _, *}
+import cats.syntax.all.*
 import cats.tagless.Derive
-import cats.tagless.aop.Instrument
-import com.dwolla.postgres.init.repositories.CreateSkunkSession._
-import com.dwolla.tracing._
-import natchez.Trace
+import cats.tagless.aop.Aspect
+import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
+import com.dwolla.tracing.syntax.*
+import natchez.{Trace, TraceableValue}
 import org.typelevel.log4cats.Logger
-import skunk._
-import skunk.codec.all._
-import skunk.implicits._
+import skunk.*
+import skunk.codec.all.*
+import skunk.implicits.*
 
 trait DatabaseRepository[F[_]] {
   def createDatabase(db: DatabaseMetadata): F[Database]
@@ -20,7 +20,7 @@ trait DatabaseRepository[F[_]] {
 }
 
 object DatabaseRepository {
-  implicit val DatabaseRepositoryInstrument: Instrument[DatabaseRepository] = Derive.instrument
+  implicit val aspectTraceableValue: Aspect[DatabaseRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def apply[F[_] : MonadCancelThrow : Logger : Trace]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
     override def createDatabase(db: DatabaseMetadata): Kleisli[F, Session[F], Database] =
@@ -30,8 +30,7 @@ object DatabaseRepository {
 
     private def checkDatabaseExists(db: DatabaseMetadata): Kleisli[F, Session[F], Boolean] = Kleisli {
       _
-        .prepare(DatabaseQueries.checkDatabaseExists)
-        .use(_.unique(db.name))
+        .unique(DatabaseQueries.checkDatabaseExists)(db.name)
         .flatTap { count =>
           Logger[F].info(s"Found $count databases matching ${db.name} on ${db.username}@${db.host}:${db.port}")
         }
@@ -56,7 +55,7 @@ object DatabaseRepository {
         .as(database)
         .recoverUndefinedAs(database)
     }
-  }.withTracing
+  }.traceWithInputsAndOutputs
 }
 
 object DatabaseQueries {

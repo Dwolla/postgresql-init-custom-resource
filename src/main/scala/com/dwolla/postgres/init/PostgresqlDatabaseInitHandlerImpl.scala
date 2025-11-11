@@ -1,20 +1,21 @@
 package com.dwolla.postgres.init
 
-import cats._
+import cats.*
 import cats.effect.std.Console
-import cats.effect.{Trace => _, _}
-import cats.syntax.all._
+import cats.effect.{Trace as _, *}
+import cats.syntax.all.*
+import com.amazonaws.secretsmanager.{ResourceNotFoundException, SecretIdType}
 import com.dwolla.postgres.init.PostgresqlDatabaseInitHandlerImpl.databaseAsPhysicalResourceId
-import com.dwolla.postgres.init.aws.{ResourceNotFoundException, SecretsManagerAlg}
-import com.dwolla.postgres.init.repositories.CreateSkunkSession._
-import com.dwolla.postgres.init.repositories._
+import com.dwolla.postgres.init.aws.SecretsManagerAlg
+import com.dwolla.postgres.init.repositories.*
+import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
 import feral.lambda.INothing
-import feral.lambda.cloudformation._
+import feral.lambda.cloudformation.*
 import fs2.io.net.Network
-import natchez._
+import natchez.*
 import org.typelevel.log4cats.Logger
 
-class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Console : Logger](secretsManagerAlg: SecretsManagerAlg[F],
+class PostgresqlDatabaseInitHandlerImpl[F[_] : Temporal : Trace : Network : Console : Logger](secretsManagerAlg: SecretsManagerAlg[F],
                                                                                                 databaseRepository: DatabaseRepository[InSession[F, *]],
                                                                                                 roleRepository: RoleRepository[InSession[F, *]],
                                                                                                 userRepository: UserRepository[InSession[F, *]],
@@ -48,7 +49,7 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Concurrent : Trace : Network : Co
       id <- f(userPasswords).inSession(input.host, input.port, input.username, input.password)
     } yield id
 
-  private def getUsernamesFromSecrets(secretIds: List[SecretId], fallback: Username): F[List[Username]] =
+  private def getUsernamesFromSecrets(secretIds: List[SecretIdType], fallback: Username): F[List[Username]] =
     secretIds.traverse { secretId =>
       secretsManagerAlg.getSecretAs[UserConnectionInfo](secretId)
         .map(_.user)

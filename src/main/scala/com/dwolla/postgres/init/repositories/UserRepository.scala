@@ -1,22 +1,22 @@
 package com.dwolla.postgres.init
 package repositories
 
-import cats.data._
-import cats.effect.{Trace => _, _}
-import cats.syntax.all._
+import cats.data.*
+import cats.effect.{Trace as _, *}
+import cats.syntax.all.*
 import cats.tagless.Derive
-import cats.tagless.aop.Instrument
-import com.dwolla.postgres.init.repositories.CreateSkunkSession._
-import com.dwolla.tracing._
+import cats.tagless.aop.Aspect
+import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
+import com.dwolla.tracing.syntax.*
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.refineV
-import natchez.Trace
-import org.typelevel.log4cats._
-import skunk._
-import skunk.codec.all._
-import skunk.implicits._
+import natchez.{Trace, TraceableValue}
+import org.typelevel.log4cats.*
+import skunk.*
+import skunk.codec.all.*
+import skunk.implicits.*
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 trait UserRepository[F[_]] {
   def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): F[Username]
@@ -24,7 +24,7 @@ trait UserRepository[F[_]] {
 }
 
 object UserRepository {
-  implicit val UserRepositoryInstrument: Instrument[UserRepository] = Derive.instrument
+  implicit val traceableValueAspect: Aspect[UserRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def usernameForDatabase(database: Database): Username =
     Username(Refined.unsafeApply(database.value.value))
@@ -41,8 +41,7 @@ object UserRepository {
     private def determineCommandFor(username: Username,
                                     password: Password): Kleisli[F, Session[F], Command[Void]] = Kleisli {
       _
-        .prepare(UserQueries.checkUserExists)
-        .use(_.option(username))
+        .option(UserQueries.checkUserExists)(username)
         .flatMap {
           case Some(_) => Logger[F].info(s"Found and updating user named $username").as(UserQueries.updateUser(username, password))
           case None => Logger[F].info(s"Creating user $username").as(UserQueries.createUser(username, password))
@@ -82,7 +81,7 @@ object UserRepository {
 
     override def removeUser(username: Username): Kleisli[F, Session[F], Username] =
       removeUser(username, 5)
-  }.withTracing
+  }.traceWithInputsAndOutputs
 }
 
 object UserQueries {

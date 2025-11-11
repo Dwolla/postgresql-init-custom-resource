@@ -2,15 +2,18 @@ package com.dwolla.postgres.init
 package repositories
 
 import cats.MonadThrow
-import cats.data._
-import cats.effect._
+import cats.data.*
+import cats.effect.*
 import cats.effect.std.Console
-import cats.syntax.all._
+import cats.syntax.all.*
 import fs2.io.net.Network
 import natchez.Trace
-import skunk._
+import skunk.*
 import skunk.util.Typer
 
+import scala.concurrent.duration.Duration
+
+@FunctionalInterface
 trait CreateSkunkSession[F[_]] {
   def single(host: String,
              port: Int = 5432,
@@ -23,6 +26,8 @@ trait CreateSkunkSession[F[_]] {
              parameters: Map[String, String] = Session.DefaultConnectionParameters,
              commandCache: Int = 1024,
              queryCache: Int = 1024,
+             parseCache: Int = 1024,
+             readTimeout: Duration = Duration.Inf,
             ): Resource[F, Session[F]]
 }
 
@@ -59,6 +64,6 @@ object CreateSkunkSession {
 
   def apply[F[_] : CreateSkunkSession]: CreateSkunkSession[F] = implicitly
 
-  implicit def instance[F[_] : Concurrent : Trace : Network : Console]: CreateSkunkSession[F] =
+  implicit def instance[F[_] : Temporal : Trace : Network : Console]: CreateSkunkSession[F] =
     Session.single _
 }

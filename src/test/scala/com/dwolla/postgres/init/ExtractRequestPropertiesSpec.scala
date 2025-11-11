@@ -1,8 +1,9 @@
 package com.dwolla.postgres.init
 
+import com.amazonaws.secretsmanager.SecretIdType
 import io.circe.Decoder
-import io.circe.literal._
-import eu.timepit.refined.auto._
+import io.circe.literal.*
+import eu.timepit.refined.auto.*
 
 class ExtractRequestPropertiesSpec extends munit.FunSuite {
 
@@ -29,7 +30,7 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
         Database("mydb"),
         MasterDatabaseUsername("masterdb"),
         MasterDatabasePassword("master-pass"),
-        List("secret1", "secret2").map(SecretId(_)),
+        List("secret1", "secret2").map(SecretIdType(_)),
       ))
     )
 

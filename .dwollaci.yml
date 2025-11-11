@@ -2,7 +2,7 @@ stages:
   build:
     nodeLabel: sbt
     steps:
-      - sbt universal:packageBin
+      - sbt Universal/packageBin
     filesToStash:
       - '**'
   publish:

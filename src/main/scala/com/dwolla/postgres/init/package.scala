@@ -1,13 +1,14 @@
 package com.dwolla.postgres
 
-import eu.timepit.refined._
+import eu.timepit.refined.*
 import eu.timepit.refined.api.Refined
-import eu.timepit.refined.string._
+import eu.timepit.refined.string.*
 import monix.newtypes.NewtypeWrapped
 import monix.newtypes.integrations.DerivedCirceCodec
+import natchez.TraceableValue
 import shapeless.ops.hlist
-import shapeless.ops.tuple._
-import shapeless.syntax.std.tuple._
+import shapeless.ops.tuple.*
+import shapeless.syntax.std.tuple.*
 import shapeless.{HList, LabelledGeneric}
 
 package object init {
@@ -32,6 +33,8 @@ package object init {
                                                                      ): Migration[A, B] =
     a => bGen.from(inter.apply(aGen.to(a)))
 
+  implicit def refinedTraceableValue[A: TraceableValue, P]: TraceableValue[A Refined P] = TraceableValue[A].contramap(_.value)
+
   type SqlIdentifierPredicate = MatchesRegex[W.`"[A-Za-z][A-Za-z0-9_]*"`.T]
   type SqlIdentifier = String Refined SqlIdentifierPredicate
   type GeneratedPasswordPredicate = MatchesRegex[W.`"""[-A-Za-z0-9!"#$%&()*+,./:<=>?@\\[\\]\\\\^_{|}~]+"""`.T]
@@ -43,9 +46,6 @@ package object init {
   type MasterDatabasePassword = MasterDatabasePassword.Type
   object MasterDatabasePassword extends NewtypeWrapped[String] with DerivedCirceCodec
 
-  type SecretId = SecretId.Type
-  object SecretId extends NewtypeWrapped[String] with DerivedCirceCodec
-
   type Host = Host.Type
   object Host extends NewtypeWrapped[String] with DerivedCirceCodec
 
@@ -53,20 +53,33 @@ package object init {
   object Port extends NewtypeWrapped[Int] with DerivedCirceCodec
 
   type Username = Username.Type
-  object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+  object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type Password = Password.Type
-  object Password extends NewtypeWrapped[GeneratedPassword] with DerivedCirceCodec
+  object Password extends NewtypeWrapped[GeneratedPassword] with DerivedCirceCodec {
+    implicit val traceableValue: TraceableValue[Password] = TraceableValue[String].contramap(_ => "redacted password")
+  }
 
   type Database = Database.Type
-  object Database extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+  object Database extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type RoleName = RoleName.Type
-  object RoleName extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+  object RoleName extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 }
 
 package init {
+
+  import monix.newtypes.HasExtractor
+
   trait Migration[A, B] {
     def apply(a: A): B
+  }
+
+  trait DerivedTraceableValueFromNewtype {
+    implicit def traceableValue[T, S](implicit
+                                      extractor: HasExtractor.Aux[T, S],
+                                      enc: TraceableValue[S],
+                                     ): TraceableValue[T] =
+      enc.contramap(extractor.extract)
   }
 }
