@@ -48,7 +48,6 @@ lazy val `postgresql-init-core` = (project in file("."))
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.6.0",
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.2",
         "com.chuusai" %% "shapeless" % "2.3.13",
-        "com.dwolla" %% "fs2-aws-java-sdk2" % "3.0.0-RC2",
         "software.amazon.awssdk" % "secretsmanager" % "2.17.295",
         "org.scalameta" %% "munit" % "1.2.1" % Test,
         "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
