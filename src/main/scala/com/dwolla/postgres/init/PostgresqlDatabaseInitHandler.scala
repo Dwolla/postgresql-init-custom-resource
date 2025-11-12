@@ -7,6 +7,7 @@ import cats.mtl.Local
 import cats.syntax.all.*
 import com.amazonaws.secretsmanager.SecretsManager
 import com.dwolla.postgres.init.aws.SecretsManagerAlg
+import com.dwolla.postgres.init.repositories.{DatabaseRepository, RoleRepository, UserRepository}
 import feral.lambda.cloudformation.*
 import feral.lambda.{AwsTags, INothing, IOLambda, Invocation, KernelSource}
 import fs2.compression.Compression
@@ -44,7 +45,12 @@ class PostgresqlDatabaseInitHandler
       secretsManager <- AwsClient(SecretsManager, awsEnv).map(SecretsManagerAlg[F](_))
     } yield { implicit env: Invocation[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] =>
       TracedHandler(entryPoint) { _ =>
-        CloudFormationCustomResource(client, PostgresqlDatabaseInitHandlerImpl(secretsManager))
+        CloudFormationCustomResource(client, PostgresqlDatabaseInitHandlerImpl(
+          secretsManager,
+          DatabaseRepository[F],
+          RoleRepository[F],
+          UserRepository[F],
+        ))
       }
     }
 
