@@ -6,6 +6,7 @@ import cats.data.*
 import cats.effect.*
 import cats.effect.std.Console
 import cats.syntax.all.*
+import com.comcast.ip4s.*
 import fs2.io.net.Network
 import natchez.Trace
 import skunk.*
@@ -44,12 +45,12 @@ object CreateSkunkSession {
                   `🦨`: CreateSkunkSession[F],
                   `[]`: MonadCancelThrow[F]): F[A] =
       CreateSkunkSession[F].single(
-        host = host.value,
+        host = host.show,
         port = port.value,
         user = username.value.value,
         database = "postgres",
         password = password.value.some,
-        ssl = SSL.System,
+        ssl = if (host == host"localhost") SSL.None else SSL.System,
       ).use(kleisli.run)
   }
 

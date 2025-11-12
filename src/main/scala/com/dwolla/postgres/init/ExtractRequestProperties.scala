@@ -2,6 +2,7 @@ package com.dwolla.postgres.init
 
 import cats.syntax.all.*
 import com.amazonaws.secretsmanager.SecretIdType
+import com.comcast.ip4s.*
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.refined.*
 import io.circe.{Decoder, HCursor, Json}

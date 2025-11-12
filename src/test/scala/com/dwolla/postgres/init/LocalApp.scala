@@ -2,6 +2,7 @@ package com.dwolla.postgres.init
 
 import cats.effect.*
 import cats.syntax.all.*
+import com.comcast.ip4s.*
 import com.dwolla.buildinfo.postgres.init.BuildInfo
 import com.dwolla.tracing.{DwollaEnvironment, OpenTelemetryAtDwolla}
 import eu.timepit.refined.auto.*
@@ -41,8 +42,8 @@ object LocalApp extends IOApp {
           LogicalResourceId = LogicalResourceId("my-resource"),
           PhysicalResourceId = None,
           ResourceProperties = DatabaseMetadata(
-            host = Host("localhost"),
-            port = Port(5432),
+            host = host"localhost",
+            port = port"5432",
             name = Database("transactionactivitymonitor"),
             username = MasterDatabaseUsername("root"),
             password = MasterDatabasePassword("root"),

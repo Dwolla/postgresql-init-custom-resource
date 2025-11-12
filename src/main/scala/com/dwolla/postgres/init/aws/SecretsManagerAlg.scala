@@ -38,7 +38,7 @@ object SecretsManagerAlg {
               List(Aspect.Advice.byValue("secretId", secretId)),
               List(Aspect.Advice.byValue("implicit decoder", Decoder[A].toString)),
             ),
-            Aspect.Advice("getSecretAs", af.getSecretAs(secretId))(TraceableValue[String].contramap[A](_ => "redacted successfully parsed and decoded secret"))
+            Aspect.Advice("getSecretAs", af.getSecretAs[A](secretId))(TraceableValue[String].contramap[A](_ => "redacted successfully parsed and decoded secret"))
           )
       }
 

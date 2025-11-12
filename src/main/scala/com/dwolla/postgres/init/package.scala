@@ -1,8 +1,11 @@
 package com.dwolla.postgres
 
+import cats.syntax.all.*
+import com.comcast.ip4s.{Host, Port}
 import eu.timepit.refined.*
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.string.*
+import io.circe.Decoder
 import monix.newtypes.NewtypeWrapped
 import monix.newtypes.integrations.DerivedCirceCodec
 import natchez.TraceableValue
@@ -48,11 +51,13 @@ package object init {
     implicit val traceableValue: TraceableValue[MasterDatabasePassword] = TraceableValue[String].contramap(_ => "redacted password")
   }
 
-  type Host = Host.Type
-  object Host extends NewtypeWrapped[String] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
+  private[init] implicit val hostDecoder: Decoder[Host] =
+    Decoder[String].emap(s => Host.fromString(s).toRight(s"$s could not be decoded as a Host"))
+  private[init] implicit val hostTraceableValue: TraceableValue[Host] = TraceableValue[String].contramap(_.show)
 
-  type Port = Port.Type
-  object Port extends NewtypeWrapped[Int] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
+  private[init] implicit val portDecoder: Decoder[Port] =
+    Decoder[Int].emap(i => Port.fromInt(i).toRight(s"$i could not be decoded as a Port"))
+  private[init] implicit val portTraceableValue: TraceableValue[Port] = TraceableValue[Int].contramap(_.value)
 
   type Username = Username.Type
   object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype

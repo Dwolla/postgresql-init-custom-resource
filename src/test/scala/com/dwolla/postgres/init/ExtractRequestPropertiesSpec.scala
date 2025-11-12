@@ -1,6 +1,7 @@
 package com.dwolla.postgres.init
 
 import com.amazonaws.secretsmanager.SecretIdType
+import com.comcast.ip4s.*
 import io.circe.Decoder
 import io.circe.literal.*
 import eu.timepit.refined.auto.*
@@ -25,8 +26,8 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
     assertEquals(
       Decoder[DatabaseMetadata].decodeJson(input),
       Right(DatabaseMetadata(
-        Host("database-hostname"),
-        Port(5432),
+        host"database-hostname",
+        port"5432",
         Database("mydb"),
         MasterDatabaseUsername("masterdb"),
         MasterDatabasePassword("master-pass"),
