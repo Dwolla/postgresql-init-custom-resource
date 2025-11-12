@@ -69,11 +69,14 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.scalameta" %% "munit" % "1.2.1" % Test,
         "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
+        "com.dwolla" %% "dwolla-otel-natchez" % "0.2.8" % Test,
       )
     },
+    buildInfoPackage := "com.dwolla.buildinfo.postgres.init",
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   )
   .dependsOn(smithy)
-  .enablePlugins(UniversalPlugin, JavaAppPackaging)
+  .enablePlugins(UniversalPlugin, JavaAppPackaging, BuildInfoPlugin)
 
 lazy val serverlessDeployCommand = settingKey[Seq[String]]("serverless command to deploy the application")
 serverlessDeployCommand := "serverless deploy --verbose".split(' ').toSeq

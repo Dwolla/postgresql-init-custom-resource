@@ -27,14 +27,17 @@ import smithy4s.aws.{AwsClient, AwsEnvironment}
 class PostgresqlDatabaseInitHandler
   extends IOLambda[CloudFormationCustomResourceRequest[DatabaseMetadata], INothing] {
 
-  private def resources[F[_] : Async : Compression : Console : Env : Files : Network](implicit L: Local[F, Span[F]]): Resource[F, Invocation[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] => F[Option[INothing]]] =
+  private def resources[F[_] : Async : Compression : Console : Env : Files : Network](entryPointOverride: Option[EntryPoint[F]])
+                                                                                     (implicit L: Local[F, Span[F]]): Resource[F, Invocation[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] => F[Option[INothing]]] =
     for {
       case implicit0(logger: Logger[F]) <- Resource.eval(Slf4jLogger.create[F])
       case implicit0(random: Random[F]) <- Resource.eval(Random.scalaUtilRandom[F])
       client <- httpClient[F]
-      entryPoint <- XRayEnvironment[F].daemonAddress.toResource.flatMap {
-        case Some(addr) => XRay.entryPoint(addr)
-        case None => XRay.entryPoint[F]()
+      entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
+        XRayEnvironment[F].daemonAddress.toResource.flatMap {
+          case Some(addr) => XRay.entryPoint(addr)
+          case None => XRay.entryPoint[F]()
+        }
       }
       region <- Env[F].get("AWS_REGION").liftEitherT(new RuntimeException("missing AWS_REGION environment variable")).map(AwsRegion(_)).rethrowT.toResource
       awsEnv <- AwsEnvironment.default(client, region)
@@ -45,9 +48,13 @@ class PostgresqlDatabaseInitHandler
       }
     }
 
+  def handler(entryPoint: EntryPoint[IO]): Resource[IO, Invocation[IO, CloudFormationCustomResourceRequest[DatabaseMetadata]] => IO[Option[INothing]]] =
+    IO.local(Span.noop[IO]).toResource
+      .flatMap(implicit l => resources[IO](entryPoint.some))
+
   override def handler: Resource[IO, Invocation[IO, CloudFormationCustomResourceRequest[DatabaseMetadata]] => IO[Option[INothing]]] =
     IO.local(Span.noop[IO]).toResource
-      .flatMap(implicit l => resources[IO])
+      .flatMap(implicit l => resources[IO](None))
 
   /**
    * The X-Ray kernel comes from environment variables, so we don't need to extract anything from the incoming event.
