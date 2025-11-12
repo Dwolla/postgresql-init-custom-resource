@@ -4,11 +4,14 @@ import cats.*
 import cats.effect.std.Console
 import cats.effect.{Trace as _, *}
 import cats.syntax.all.*
+import cats.tagless.aop.Aspect
+import cats.tagless.{Derive, Trivial}
 import com.amazonaws.secretsmanager.{ResourceNotFoundException, SecretIdType}
 import com.dwolla.postgres.init.PostgresqlDatabaseInitHandlerImpl.databaseAsPhysicalResourceId
 import com.dwolla.postgres.init.aws.SecretsManagerAlg
 import com.dwolla.postgres.init.repositories.*
 import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
+import com.dwolla.tracing.TraceWeaveCapturingInputs
 import feral.lambda.INothing
 import feral.lambda.cloudformation.*
 import fs2.io.net.Network
@@ -71,13 +74,20 @@ class PostgresqlDatabaseInitHandlerImpl[F[_] : Temporal : Trace : Network : Cons
 }
 
 object PostgresqlDatabaseInitHandlerImpl {
-  def apply[F[_] : Temporal : Trace : Network : Console : Logger](secretsManager: SecretsManagerAlg[F]): PostgresqlDatabaseInitHandlerImpl[F] =
-    new PostgresqlDatabaseInitHandlerImpl(
+  def apply[F[_] : Temporal : Trace : Network : Console : Logger](secretsManager: SecretsManagerAlg[F]): CloudFormationCustomResource[F, DatabaseMetadata, INothing] = {
+    val impl: CloudFormationCustomResource[F, DatabaseMetadata, INothing] = new PostgresqlDatabaseInitHandlerImpl(
       secretsManager,
       DatabaseRepository[F],
       RoleRepository[F],
       UserRepository[F],
     )
+
+    cloudFormationCustomResourceAspect[DatabaseMetadata].mapK(cloudFormationCustomResourceAspect[DatabaseMetadata].weave(impl))(new TraceWeaveCapturingInputs)
+  }
+
+  implicit val physicalResourceIdTraceableValue: TraceableValue[feral.lambda.cloudformation.PhysicalResourceId] = TraceableValue[String].contramap(_.value)
+
+  implicit def cloudFormationCustomResourceAspect[Input: TraceableValue]: Aspect[CloudFormationCustomResource[*[_], Input, INothing], TraceableValue, Trivial] = Derive.aspect
 
   private[PostgresqlDatabaseInitHandlerImpl] def databaseAsPhysicalResourceId[F[_] : ApplicativeThrow](db: Database): F[PhysicalResourceId] =
     PhysicalResourceId(db.value.value).liftTo[F](new RuntimeException("Database name was invalid as Physical Resource ID"))

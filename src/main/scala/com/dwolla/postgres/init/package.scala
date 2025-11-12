@@ -41,16 +41,18 @@ package object init {
   type GeneratedPassword = String Refined GeneratedPasswordPredicate
 
   type MasterDatabaseUsername = MasterDatabaseUsername.Type
-  object MasterDatabaseUsername extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec
+  object MasterDatabaseUsername extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type MasterDatabasePassword = MasterDatabasePassword.Type
-  object MasterDatabasePassword extends NewtypeWrapped[String] with DerivedCirceCodec
+  object MasterDatabasePassword extends NewtypeWrapped[String] with DerivedCirceCodec {
+    implicit val traceableValue: TraceableValue[MasterDatabasePassword] = TraceableValue[String].contramap(_ => "redacted password")
+  }
 
   type Host = Host.Type
-  object Host extends NewtypeWrapped[String] with DerivedCirceCodec
+  object Host extends NewtypeWrapped[String] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type Port = Port.Type
-  object Port extends NewtypeWrapped[Int] with DerivedCirceCodec
+  object Port extends NewtypeWrapped[Int] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type Username = Username.Type
   object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype

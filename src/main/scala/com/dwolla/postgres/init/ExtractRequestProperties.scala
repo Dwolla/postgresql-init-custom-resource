@@ -2,7 +2,6 @@ package com.dwolla.postgres.init
 
 import cats.syntax.all.*
 import com.amazonaws.secretsmanager.SecretIdType
-import com.dwolla.tracing.LowPriorityTraceableValueInstances.nonPrimitiveTraceValueViaJson
 import io.circe.generic.semiauto.deriveDecoder
 import io.circe.refined.*
 import io.circe.{Decoder, HCursor, Json}
@@ -29,7 +28,7 @@ object DatabaseMetadata {
     ).mapN(DatabaseMetadata.apply)
   }
 
-  implicit val traceableValue: TraceableValue[DatabaseMetadata] = TraceableValue[Json].contramap { dm =>
+  implicit val traceableValue: TraceableValue[DatabaseMetadata] = TraceableValue[String].contramap { dm =>
     implicit def toTraceableValueOps[A](a: A): TraceableValueOps[A] = new TraceableValueOps[A](a)
 
     json"""{
@@ -39,7 +38,7 @@ object DatabaseMetadata {
           "MasterDatabaseUsername": ${dm.username.toTraceValue},
           "MasterDatabasePassword": ${dm.password.toTraceValue},
           "UserConnectionSecrets": ${dm.secretIds.map(_.toTraceValue)}
-        }"""
+        }""".noSpaces
   }
 }
 
@@ -53,7 +52,7 @@ case class UserConnectionInfo(database: Database,
 object UserConnectionInfo {
   implicit val UserConnectionInfoDecoder: Decoder[UserConnectionInfo] = deriveDecoder[UserConnectionInfo]
 
-  implicit val traceableValue: TraceableValue[UserConnectionInfo] = TraceableValue[Json].contramap { uci =>
+  implicit val traceableValue: TraceableValue[UserConnectionInfo] = TraceableValue[String].contramap { uci =>
     implicit def toTraceableValueOps[A](a: A): TraceableValueOps[A] = new TraceableValueOps[A](a)
 
     json"""{
@@ -62,7 +61,7 @@ object UserConnectionInfo {
           "database": ${uci.database.toTraceValue},
           "user": ${uci.user.toTraceValue},
           "password": ${uci.password.toTraceValue}
-        }"""
+        }""".noSpaces
   }
 }
 
