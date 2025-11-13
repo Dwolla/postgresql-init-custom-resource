@@ -6,7 +6,7 @@ import org.scalacheck.Prop.forAll
 import org.scalacheck.{Arbitrary, Gen, Shrink}
 
 class SqlStringRegexSpec extends munit.ScalaCheckSuite {
-  implicit val shrinkString: Shrink[String] = Shrink.shrinkAny
+  given Shrink[String] = Shrink.shrinkAny
 
   test("strings containing semicolons don't validate") {
     assert(refineV[GeneratedPasswordPredicate](";").isLeft)
@@ -17,7 +17,7 @@ class SqlStringRegexSpec extends munit.ScalaCheckSuite {
   }
 
   property("sql identifiers match [A-Za-z][A-Za-z0-9_]*") {
-    implicit val arbString: Arbitrary[String] = Arbitrary {
+    given Arbitrary[String] = Arbitrary {
       for {
         initial <- Gen.alphaChar
         tail <- Gen.stringOf(Gen.oneOf(Gen.alphaChar, Gen.numChar, Gen.const('_')))
@@ -30,7 +30,7 @@ class SqlStringRegexSpec extends munit.ScalaCheckSuite {
   }
 
   property("passwords contain the allowed characters") {
-    implicit val arbString: Arbitrary[String] = Arbitrary {
+    given Arbitrary[String] = Arbitrary {
       val allowedPunctuation: Gen[Char] = Gen.oneOf("""! " # $ % & ( ) * + , - . / : < = > ? @ [ \ ] ^ _ { | } ~ """.replaceAll(" ", "").toList)
       val allowedCharacters: Gen[Char] = Gen.oneOf(Gen.alphaChar, Gen.numChar, allowedPunctuation)
 

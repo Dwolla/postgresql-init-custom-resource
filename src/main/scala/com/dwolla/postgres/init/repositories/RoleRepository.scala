@@ -26,7 +26,7 @@ trait RoleRepository[F[_]] {
 
 @annotation.experimental
 object RoleRepository {
-  implicit val traceableValueAspect: Aspect[RoleRepository, TraceableValue, TraceableValue] = Derive.aspect
+  given Aspect[RoleRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def roleNameForDatabase(database: Database): RoleName =
     RoleName(Refined.unsafeApply(database.value + "_role"))

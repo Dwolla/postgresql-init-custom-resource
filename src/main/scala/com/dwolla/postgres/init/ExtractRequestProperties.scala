@@ -19,7 +19,7 @@ case class DatabaseMetadata(host: Host,
                            )
 
 object DatabaseMetadata {
-  implicit val DecodeDatabaseMetadata: Decoder[DatabaseMetadata] = Decoder.accumulatingInstance { (c: HCursor) =>
+  given Decoder[DatabaseMetadata] = Decoder.accumulatingInstance { (c: HCursor) =>
     (c.downField("Host").asAcc[Host],
       c.downField("Port").asAcc[Port],
       c.downField("DatabaseName").asAcc[Database],
@@ -29,7 +29,7 @@ object DatabaseMetadata {
     ).mapN(DatabaseMetadata.apply)
   }
 
-  implicit val traceableValue: TraceableValue[DatabaseMetadata] = TraceableValue[String].contramap { dm =>
+  given TraceableValue[DatabaseMetadata] = TraceableValue[String].contramap { dm =>
     json"""{
           "Host": ${dm.host.toTraceValue},
           "Port": ${dm.port.toTraceValue},
@@ -49,9 +49,9 @@ case class UserConnectionInfo(database: Database,
                              )
 
 object UserConnectionInfo {
-  implicit val UserConnectionInfoDecoder: Decoder[UserConnectionInfo] = deriveDecoder[UserConnectionInfo]
+  given Decoder[UserConnectionInfo] = deriveDecoder[UserConnectionInfo]
 
-  implicit val traceableValue: TraceableValue[UserConnectionInfo] = TraceableValue[String].contramap { uci =>
+  given TraceableValue[UserConnectionInfo] = TraceableValue[String].contramap { uci =>
     json"""{
           "host": ${uci.host.toTraceValue},
           "port": ${uci.port.toTraceValue},
@@ -63,7 +63,7 @@ object UserConnectionInfo {
 }
 
 extension [A](a: A)
-  def toTraceValue(implicit T: TraceableValue[A]): Json = T.toTraceValue(a) match
+  def toTraceValue(using TraceableValue[A]): Json = TraceableValue[A].toTraceValue(a) match
     case TraceValue.StringValue(value) => value.asJson
     case TraceValue.BooleanValue(value) => value.asJson
     case TraceValue.NumberValue(value) =>

@@ -68,7 +68,7 @@ class PostgresqlDatabaseInitHandler
    * The kernel will be sourced from the environment/system properties if useEnvironmentFallback is true when
    * initializing the X-Ray entrypoint.
    */
-  private implicit def kernelSource[Event]: KernelSource[Event] = KernelSource.emptyKernelSource
+  private given [Event]: KernelSource[Event] = KernelSource.emptyKernelSource
 
   private def httpClient[F[_] : {Async, Network, Trace}]: Resource[F, Client[F]] =
     EmberClientBuilder

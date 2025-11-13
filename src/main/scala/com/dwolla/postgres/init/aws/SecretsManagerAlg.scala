@@ -19,7 +19,7 @@ trait SecretsManagerAlg[F[_]] {
 }
 
 object SecretsManagerAlg {
-  implicit val traceableValueAspect: Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] = new Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] {
+  given Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] = new Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] {
     override def weave[F[_]](af: SecretsManagerAlg[F]): SecretsManagerAlg[Aspect.Weave[F, TraceableValue, TraceableValue, *]] =
       new SecretsManagerAlg[Aspect.Weave[F, TraceableValue, TraceableValue, *]] {
         override def getSecret(secretId: SecretIdType): Aspect.Weave[F, TraceableValue, TraceableValue, Secret] =
@@ -91,7 +91,7 @@ case class SecretString(value: SecretStringType) extends Secret
 case class SecretBinary(value: SecretBinaryType) extends Secret
 
 object Secret {
-  implicit val traceableValue: TraceableValue[Secret] = TraceableValue[String].contramap {
+  given TraceableValue[Secret] = TraceableValue[String].contramap {
     case SecretString(_) => "redacted string secret"
     case SecretBinary(_) => "redacted binary secret"
   }

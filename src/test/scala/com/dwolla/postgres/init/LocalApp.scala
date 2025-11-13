@@ -30,7 +30,7 @@ import scala.concurrent.duration.*
 object LocalApp extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
-    implicit val loggerFactory: LoggerFactory[IO] = Slf4jFactory.create[IO]
+    given LoggerFactory[IO] = Slf4jFactory.create[IO]
 
     OpenTelemetryAtDwolla[IO](BuildInfo.name, BuildInfo.version, DwollaEnvironment.Local)
       .flatMap(new PostgresqlDatabaseInitHandler().handler(_))

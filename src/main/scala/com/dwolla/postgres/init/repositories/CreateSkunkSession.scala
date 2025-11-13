@@ -35,15 +35,13 @@ trait CreateSkunkSession[F[_]] {
 object CreateSkunkSession {
   type InSession[F[_], A] = Kleisli[F, Session[F], A]
 
-  implicit class InSessionOps[F[_], A](val kleisli: Kleisli[F, Session[F], A]) extends AnyVal {
+  extension [F[_], A](kleisli: Kleisli[F, Session[F], A])
     def inSession(host: Host,
                   port: Port,
                   username: MasterDatabaseUsername,
                   password: MasterDatabasePassword,
                  )
-                 (implicit
-                  `🦨`: CreateSkunkSession[F],
-                  `[]`: MonadCancelThrow[F]): F[A] =
+                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
       CreateSkunkSession[F].single(
         host = host.show,
         port = port.value,
@@ -52,19 +50,15 @@ object CreateSkunkSession {
         password = password.value.some,
         ssl = if (host == host"localhost") SSL.None else SSL.System,
       ).use(kleisli.run)
-  }
 
-  implicit class IgnoreErrorOps[F[_], A](val fa: F[A]) extends AnyVal {
+  extension [F[_], A](fa: F[A])
     def recoverUndefinedAs(a: A)
-                          (implicit `[]`: MonadThrow[F]): F[A] =
-      fa.recover {
+                          (using MonadThrow[F]): F[A] =
+      fa.recover:
         case SqlState.UndefinedObject(_) => a
         case SqlState.InvalidCatalogName(_) => a
-      }
-  }
 
   def apply[F[_] : CreateSkunkSession]: CreateSkunkSession[F] = implicitly
 
-  implicit def instance[F[_] : {Temporal, Trace, Network, Console}]: CreateSkunkSession[F] =
-    Session.single
+  given [F[_] : {Temporal, Trace, Network, Console}]: CreateSkunkSession[F] = Session.single
 }

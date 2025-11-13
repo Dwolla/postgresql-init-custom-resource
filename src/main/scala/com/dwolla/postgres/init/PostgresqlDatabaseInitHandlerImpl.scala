@@ -21,18 +21,18 @@ trait PostgresqlDatabaseInitHandlerImpl[F[_]] extends CloudFormationCustomResour
 
 @annotation.experimental
 object PostgresqlDatabaseInitHandlerImpl {
-  implicit val physicalResourceIdTraceableValue: TraceableValue[feral.lambda.cloudformation.PhysicalResourceId] = TraceableValue[String].contramap(_.value)
+  given TraceableValue[feral.lambda.cloudformation.PhysicalResourceId] = TraceableValue[String].contramap(_.value)
 
-  implicit def postgresqlDatabaseInitHandlerImplAspect: Aspect[PostgresqlDatabaseInitHandlerImpl, TraceableValue, Trivial] = Derive.aspect
+  given Aspect[PostgresqlDatabaseInitHandlerImpl, TraceableValue, Trivial] = Derive.aspect
 
   private[PostgresqlDatabaseInitHandlerImpl] def databaseAsPhysicalResourceId[F[_] : ApplicativeThrow](db: Database): F[PhysicalResourceId] =
     PhysicalResourceId(db.value.value).liftTo[F](new RuntimeException("Database name was invalid as Physical Resource ID"))
 
-  def apply[F[_] : Temporal : Trace : Network : Console : Logger](secretsManagerAlg: SecretsManagerAlg[F],
-                                                                  databaseRepository: DatabaseRepository[InSession[F, *]],
-                                                                  roleRepository: RoleRepository[InSession[F, *]],
-                                                                  userRepository: UserRepository[InSession[F, *]],
-                                                                 ): PostgresqlDatabaseInitHandlerImpl[F] = new PostgresqlDatabaseInitHandlerImpl[F] {
+  def apply[F[_] : {Temporal, Trace, Network, Console, Logger}](secretsManagerAlg: SecretsManagerAlg[F],
+                                                                databaseRepository: DatabaseRepository[InSession[F, *]],
+                                                                roleRepository: RoleRepository[InSession[F, *]],
+                                                                userRepository: UserRepository[InSession[F, *]],
+                                                               ): PostgresqlDatabaseInitHandlerImpl[F] = new PostgresqlDatabaseInitHandlerImpl[F] {
     override def createResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
       handleCreateOrUpdate(event)(createOrUpdate(_, event)).map(HandlerResponse(_, None))
 

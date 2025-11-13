@@ -21,9 +21,9 @@ trait DatabaseRepository[F[_]] {
 
 @annotation.experimental
 object DatabaseRepository {
-  implicit val aspectTraceableValue: Aspect[DatabaseRepository, TraceableValue, TraceableValue] = Derive.aspect
+  given Aspect[DatabaseRepository, TraceableValue, TraceableValue] = Derive.aspect
 
-  def apply[F[_] : MonadCancelThrow : Logger : Trace]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
+  def apply[F[_] : {MonadCancelThrow, Logger, Trace}]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
     override def createDatabase(db: DatabaseMetadata): Kleisli[F, Session[F], Database] =
       checkDatabaseExists(db)
         .ifM(createDatabase(db.name, db.username), Logger[F].mapK(Kleisli.liftK[F, Session[F]]).info(s"No-op: database ${db.name} already exists"))
