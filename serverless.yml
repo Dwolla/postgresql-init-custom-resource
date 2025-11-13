@@ -4,7 +4,7 @@ variablesResolutionMode: 20210326
 
 provider:
   name: aws
-  runtime: java11
+  runtime: java17
   memorySize: 1024
   timeout: 60
   region: us-west-2

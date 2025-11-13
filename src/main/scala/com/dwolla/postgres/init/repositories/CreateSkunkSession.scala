@@ -2,15 +2,19 @@ package com.dwolla.postgres.init
 package repositories
 
 import cats.MonadThrow
-import cats.data._
-import cats.effect._
+import cats.data.*
+import cats.effect.*
 import cats.effect.std.Console
-import cats.syntax.all._
+import cats.syntax.all.*
+import com.comcast.ip4s.*
 import fs2.io.net.Network
 import natchez.Trace
-import skunk._
+import skunk.*
 import skunk.util.Typer
 
+import scala.concurrent.duration.Duration
+
+@FunctionalInterface
 trait CreateSkunkSession[F[_]] {
   def single(host: String,
              port: Int = 5432,
@@ -23,42 +27,38 @@ trait CreateSkunkSession[F[_]] {
              parameters: Map[String, String] = Session.DefaultConnectionParameters,
              commandCache: Int = 1024,
              queryCache: Int = 1024,
+             parseCache: Int = 1024,
+             readTimeout: Duration = Duration.Inf,
             ): Resource[F, Session[F]]
 }
 
 object CreateSkunkSession {
   type InSession[F[_], A] = Kleisli[F, Session[F], A]
 
-  implicit class InSessionOps[F[_], A](val kleisli: Kleisli[F, Session[F], A]) extends AnyVal {
+  extension [F[_], A](kleisli: Kleisli[F, Session[F], A])
     def inSession(host: Host,
                   port: Port,
                   username: MasterDatabaseUsername,
                   password: MasterDatabasePassword,
                  )
-                 (implicit
-                  `🦨`: CreateSkunkSession[F],
-                  `[]`: MonadCancelThrow[F]): F[A] =
+                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
       CreateSkunkSession[F].single(
-        host = host.value,
+        host = host.show,
         port = port.value,
         user = username.value.value,
         database = "postgres",
         password = password.value.some,
-        ssl = SSL.System,
+        ssl = if (host == host"localhost") SSL.None else SSL.System,
       ).use(kleisli.run)
-  }
 
-  implicit class IgnoreErrorOps[F[_], A](val fa: F[A]) extends AnyVal {
+  extension [F[_], A](fa: F[A])
     def recoverUndefinedAs(a: A)
-                          (implicit `[]`: MonadThrow[F]): F[A] =
-      fa.recover {
+                          (using MonadThrow[F]): F[A] =
+      fa.recover:
         case SqlState.UndefinedObject(_) => a
         case SqlState.InvalidCatalogName(_) => a
-      }
-  }
 
   def apply[F[_] : CreateSkunkSession]: CreateSkunkSession[F] = implicitly
 
-  implicit def instance[F[_] : Concurrent : Trace : Network : Console]: CreateSkunkSession[F] =
-    Session.single _
+  given [F[_] : {Temporal, Trace, Network, Console}]: CreateSkunkSession[F] = Session.single
 }

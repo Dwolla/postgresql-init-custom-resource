@@ -1,20 +1,21 @@
 package com.dwolla.postgres.init
 package repositories
 
-import cats.data._
-import cats.effect.{Trace => _, _}
-import cats.syntax.all._
+import cats.data.*
+import cats.effect.{Trace as _, *}
+import cats.syntax.all.*
 import cats.tagless.Derive
-import cats.tagless.aop.Instrument
-import com.dwolla.postgres.init.repositories.CreateSkunkSession._
-import com.dwolla.tracing._
+import cats.tagless.aop.Aspect
+import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
+import com.dwolla.tracing.syntax.*
+import com.dwolla.tracing.LowPriorityTraceableValueInstances.*
 import eu.timepit.refined.api.Refined
-import eu.timepit.refined.auto._
-import natchez.Trace
+import eu.timepit.refined.auto.*
+import natchez.{Trace, TraceableValue}
 import org.typelevel.log4cats.Logger
-import skunk._
-import skunk.codec.all._
-import skunk.implicits._
+import skunk.*
+import skunk.codec.all.*
+import skunk.implicits.*
 
 trait RoleRepository[F[_]] {
   def createRole(database: Database): F[Unit]
@@ -23,8 +24,9 @@ trait RoleRepository[F[_]] {
   def removeUserFromRole(username: Username, database: Database): F[Unit]
 }
 
+@annotation.experimental
 object RoleRepository {
-  implicit val RoleRepositoryInstrument: Instrument[RoleRepository] = Derive.instrument
+  given Aspect[RoleRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def roleNameForDatabase(database: Database): RoleName =
     RoleName(Refined.unsafeApply(database.value + "_role"))
@@ -39,8 +41,7 @@ object RoleRepository {
 
     private def checkRoleExists(role: RoleName): Kleisli[F, Session[F], Boolean] = Kleisli {
       _
-        .prepare(RoleQueries.countRoleByName)
-        .use(_.unique(role))
+        .unique(RoleQueries.countRoleByName)(role)
         .flatTap { count =>
           Logger[F].info(s"found $count roles named $role")
         }
@@ -108,7 +109,7 @@ object RoleRepository {
         .void
         .recoverUndefinedAs(())
     }
-  }.withTracing
+  }.traceWithInputsAndOutputs
 }
 
 object RoleQueries {
