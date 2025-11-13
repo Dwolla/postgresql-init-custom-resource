@@ -37,6 +37,8 @@ provider:
     securityGroupIds:
       - !GetAtt LambdaSg.GroupId
   lambdaHashingVersion: 20201221
+  tracing:
+    lambda: Active
 
 functions:
   InitPostgresDatabase:
