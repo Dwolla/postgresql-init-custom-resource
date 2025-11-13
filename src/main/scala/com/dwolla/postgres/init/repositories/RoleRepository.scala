@@ -24,6 +24,7 @@ trait RoleRepository[F[_]] {
   def removeUserFromRole(username: Username, database: Database): F[Unit]
 }
 
+@annotation.experimental
 object RoleRepository {
   implicit val traceableValueAspect: Aspect[RoleRepository, TraceableValue, TraceableValue] = Derive.aspect
 

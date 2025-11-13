@@ -19,6 +19,7 @@ trait DatabaseRepository[F[_]] {
   def removeDatabase(database: Database): F[Database]
 }
 
+@annotation.experimental
 object DatabaseRepository {
   implicit val aspectTraceableValue: Aspect[DatabaseRepository, TraceableValue, TraceableValue] = Derive.aspect
 

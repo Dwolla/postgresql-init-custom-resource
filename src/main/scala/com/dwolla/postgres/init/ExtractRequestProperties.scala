@@ -30,8 +30,6 @@ object DatabaseMetadata {
   }
 
   implicit val traceableValue: TraceableValue[DatabaseMetadata] = TraceableValue[String].contramap { dm =>
-    implicit def toTraceableValueOps[A](a: A): TraceableValueOps[A] = new TraceableValueOps[A](a)
-
     json"""{
           "Host": ${dm.host.toTraceValue},
           "Port": ${dm.port.toTraceValue},
@@ -54,8 +52,6 @@ object UserConnectionInfo {
   implicit val UserConnectionInfoDecoder: Decoder[UserConnectionInfo] = deriveDecoder[UserConnectionInfo]
 
   implicit val traceableValue: TraceableValue[UserConnectionInfo] = TraceableValue[String].contramap { uci =>
-    implicit def toTraceableValueOps[A](a: A): TraceableValueOps[A] = new TraceableValueOps[A](a)
-
     json"""{
           "host": ${uci.host.toTraceValue},
           "port": ${uci.port.toTraceValue},
@@ -66,12 +62,12 @@ object UserConnectionInfo {
   }
 }
 
-private class TraceableValueOps[A](val a: A) extends AnyVal {
-  def toTraceValue(implicit T: TraceableValue[A]): Json = T.toTraceValue(a) match {
+extension [A](a: A)
+  def toTraceValue(implicit T: TraceableValue[A]): Json = T.toTraceValue(a) match
     case TraceValue.StringValue(value) => value.asJson
     case TraceValue.BooleanValue(value) => value.asJson
     case TraceValue.NumberValue(value) =>
-      value match {
+      value match
         case i: java.lang.Byte    => Json.fromInt(i.intValue)
         case s: java.lang.Short   => Json.fromInt(s.intValue)
         case i: java.lang.Integer => Json.fromInt(i)
@@ -86,6 +82,3 @@ private class TraceableValueOps[A](val a: A) extends AnyVal {
           // Fallback: try BigDecimal to preserve value if possible
           val bd = new java.math.BigDecimal(value.toString)
           Json.fromBigDecimal(scala.math.BigDecimal(bd))
-      }
-  }
-}

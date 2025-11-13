@@ -2,7 +2,7 @@ ThisBuild / organization := "com.dwolla"
 ThisBuild / description := "CloudFormation custom resource to initialize a PostgreSQL database with a new user"
 ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
 ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
-ThisBuild / scalaVersion := "2.13.17"
+ThisBuild / scalaVersion := "3.7.4"
 ThisBuild / developers := List(
   Developer(
     "bpholt",
@@ -12,10 +12,6 @@ ThisBuild / developers := List(
   ),
 )
 ThisBuild / startYear := Option(2021)
-ThisBuild / libraryDependencies ++= Seq(
-  compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.4" cross CrossVersion.full),
-  compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
-)
 ThisBuild / resolvers += Resolver.sonatypeCentralSnapshots
 
 lazy val smithy = (project in file("smithy"))
@@ -51,7 +47,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
         "org.tpolecat" %% "natchez-http4s" % "0.6.1",
-        "org.typelevel" %% "cats-tagless-macros" % "0.16.3-85-591274f-SNAPSHOT", // see https://github.com/typelevel/cats-tagless/issues/652
+        "org.typelevel" %% "cats-tagless-core" % "0.16.3-85-591274f-SNAPSHOT", // see https://github.com/typelevel/cats-tagless/issues/652
         "org.http4s" %% "http4s-ember-client" % "0.23.32",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
@@ -63,7 +59,6 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.typelevel" %% "log4cats-slf4j" % "2.7.1",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.6.0",
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.2",
-        "com.chuusai" %% "shapeless" % "2.3.13",
         "com.dwolla" %% "natchez-tagless" % "0.2.6-131-d6a1c7c-SNAPSHOT",
         "org.typelevel" %% "mouse" % "1.4.0",
         "com.comcast" %% "ip4s-core" % "3.7.0",

@@ -1,5 +1,6 @@
 package com.dwolla.postgres.init
 
+import cats.syntax.all.*
 import eu.timepit.refined.refineV
 import org.scalacheck.Prop.forAll
 import org.scalacheck.{Arbitrary, Gen, Shrink}
@@ -23,8 +24,8 @@ class SqlStringRegexSpec extends munit.ScalaCheckSuite {
       } yield s"$initial$tail"
     }
 
-    forAll { s: String =>
-      assert(refineV[SqlIdentifierPredicate](s).map(_.value) == Right(s))
+    forAll { (s: String) =>
+      assertEquals(refineV[SqlIdentifierPredicate](s).map(_.value), s.asRight)
     }
   }
 
@@ -39,8 +40,8 @@ class SqlStringRegexSpec extends munit.ScalaCheckSuite {
       } yield s"$initial$tail"
     }
 
-    forAll { s: String =>
-      assert(refineV[GeneratedPasswordPredicate](s).map(_.value) == Right(s))
+    forAll { (s: String) =>
+      assertEquals(refineV[GeneratedPasswordPredicate](s).map(_.value), s.asRight)
     }
   }
 }

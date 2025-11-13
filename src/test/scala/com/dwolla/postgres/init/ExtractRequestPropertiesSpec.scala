@@ -4,7 +4,6 @@ import com.amazonaws.secretsmanager.SecretIdType
 import com.comcast.ip4s.*
 import io.circe.Decoder
 import io.circe.literal.*
-import eu.timepit.refined.auto.*
 
 class ExtractRequestPropertiesSpec extends munit.FunSuite {
 
@@ -28,8 +27,8 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
       Right(DatabaseMetadata(
         host"database-hostname",
         port"5432",
-        Database("mydb"),
-        MasterDatabaseUsername("masterdb"),
+        Database(SqlIdentifier.unsafeFrom("mydb")),
+        MasterDatabaseUsername(SqlIdentifier.unsafeFrom("masterdb")),
         MasterDatabasePassword("master-pass"),
         List("secret1", "secret2").map(SecretIdType(_)),
       ))

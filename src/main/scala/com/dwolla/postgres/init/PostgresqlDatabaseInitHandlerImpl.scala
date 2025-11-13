@@ -19,6 +19,7 @@ import org.typelevel.log4cats.Logger
 
 trait PostgresqlDatabaseInitHandlerImpl[F[_]] extends CloudFormationCustomResource[F, DatabaseMetadata, INothing]
 
+@annotation.experimental
 object PostgresqlDatabaseInitHandlerImpl {
   implicit val physicalResourceIdTraceableValue: TraceableValue[feral.lambda.cloudformation.PhysicalResourceId] = TraceableValue[String].contramap(_.value)
 

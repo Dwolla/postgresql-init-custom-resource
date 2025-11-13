@@ -25,14 +25,15 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import smithy4s.aws.kernel.AwsRegion
 import smithy4s.aws.{AwsClient, AwsEnvironment}
 
+@annotation.experimental
 class PostgresqlDatabaseInitHandler
   extends IOLambda[CloudFormationCustomResourceRequest[DatabaseMetadata], INothing] {
 
-  private def resources[F[_] : Async : Compression : Console : Env : Files : Network](entryPointOverride: Option[EntryPoint[F]])
-                                                                                     (implicit L: Local[F, Span[F]]): Resource[F, Invocation[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] => F[Option[INothing]]] =
+  private def resources[F[_] : {Async, Compression, Console, Env, Files, Network}](entryPointOverride: Option[EntryPoint[F]])
+                                                                                  (using Local[F, Span[F]]): Resource[F, Invocation[F, CloudFormationCustomResourceRequest[DatabaseMetadata]] => F[Option[INothing]]] =
     for {
-      case implicit0(logger: Logger[F]) <- Resource.eval(Slf4jLogger.create[F])
-      case implicit0(random: Random[F]) <- Resource.eval(Random.scalaUtilRandom[F])
+      given Logger[F] <- Resource.eval(Slf4jLogger.create[F])
+      given Random[F] <- Resource.eval(Random.scalaUtilRandom[F])
       client <- httpClient[F]
       entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
         XRayEnvironment[F].daemonAddress.toResource.flatMap {
@@ -69,7 +70,7 @@ class PostgresqlDatabaseInitHandler
    */
   private implicit def kernelSource[Event]: KernelSource[Event] = KernelSource.emptyKernelSource
 
-  private def httpClient[F[_] : Async : Network : Trace]: Resource[F, Client[F]] =
+  private def httpClient[F[_] : {Async, Network, Trace}]: Resource[F, Client[F]] =
     EmberClientBuilder
       .default[F]
       .build
@@ -82,9 +83,9 @@ class PostgresqlDatabaseInitHandler
 object TracedHandler {
   def apply[F[_] : MonadCancelThrow, Event, Result](entryPoint: EntryPoint[F])
                                                    (handler: Trace[F] => F[Option[Result]])
-                                                   (implicit inv: Invocation[F, Event],
-                                                    KS: KernelSource[Event],
-                                                    L: Local[F, Span[F]]): F[Option[Result]] =
+                                                   (using Invocation[F, Event],
+                                                    KernelSource[Event],
+                                                    Local[F, Span[F]]): F[Option[Result]] =
     for {
       event <- Invocation[F, Event].event
       context <- Invocation[F, Event].context

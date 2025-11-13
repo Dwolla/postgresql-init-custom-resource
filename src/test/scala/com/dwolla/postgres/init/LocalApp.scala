@@ -11,6 +11,7 @@ import feral.lambda.{Context, Invocation}
 import org.http4s.syntax.all.*
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
+import com.amazonaws.secretsmanager.SecretIdType
 
 import scala.concurrent.duration.*
 
@@ -25,6 +26,7 @@ import scala.concurrent.duration.*
  * should continue to work. OTel traces will be emitted and sent to the collector configured
  * via environment variables.
  */
+@annotation.experimental
 object LocalApp extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
@@ -44,10 +46,10 @@ object LocalApp extends IOApp {
           ResourceProperties = DatabaseMetadata(
             host = host"localhost",
             port = port"5432",
-            name = Database("transactionactivitymonitor"),
-            username = MasterDatabaseUsername("root"),
-            password = MasterDatabasePassword("root"),
-            secretIds = List("my-UserConnectionInfo-secret"),
+            name = Database(SqlIdentifier.unsafeFrom("transactionactivitymonitor")),
+            username = MasterDatabaseUsername(SqlIdentifier.unsafeFrom("root")),
+            password = MasterDatabasePassword(SqlIdentifier.unsafeFrom("root")),
+            secretIds = List("my-UserConnectionInfo-secret").map(SecretIdType(_)),
           ),
           OldResourceProperties = None,
         )

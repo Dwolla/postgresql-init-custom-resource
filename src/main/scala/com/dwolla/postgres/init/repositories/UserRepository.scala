@@ -23,6 +23,7 @@ trait UserRepository[F[_]] {
   def removeUser(username: Username): F[Username]
 }
 
+@annotation.experimental
 object UserRepository {
   implicit val traceableValueAspect: Aspect[UserRepository, TraceableValue, TraceableValue] = Derive.aspect
 

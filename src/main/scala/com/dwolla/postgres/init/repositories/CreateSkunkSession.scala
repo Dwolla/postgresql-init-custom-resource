@@ -65,6 +65,6 @@ object CreateSkunkSession {
 
   def apply[F[_] : CreateSkunkSession]: CreateSkunkSession[F] = implicitly
 
-  implicit def instance[F[_] : Temporal : Trace : Network : Console]: CreateSkunkSession[F] =
-    Session.single _
+  implicit def instance[F[_] : {Temporal, Trace, Network, Console}]: CreateSkunkSession[F] =
+    Session.single
 }

@@ -3,45 +3,22 @@ package com.dwolla.postgres
 import cats.syntax.all.*
 import com.comcast.ip4s.{Host, Port}
 import eu.timepit.refined.*
-import eu.timepit.refined.api.Refined
+import eu.timepit.refined.api.*
 import eu.timepit.refined.string.*
 import io.circe.Decoder
 import monix.newtypes.NewtypeWrapped
 import monix.newtypes.integrations.DerivedCirceCodec
 import natchez.TraceableValue
-import shapeless.ops.hlist
-import shapeless.ops.tuple.*
-import shapeless.syntax.std.tuple.*
-import shapeless.{HList, LabelledGeneric}
 
 package object init {
-  implicit class ApplyAll[P <: Product](p: P) {
-    def applyAll[A, B, O](a: A)
-                         (implicit
-                          cm: ConstMapper.Aux[P, A, B],
-                          za: ZipApply.Aux[P, B, O],
-                         ): O =
-      p.zipApply(p.mapConst(a))
-  }
-
-  implicit class MigrationOps[A](a: A) {
-    def migrateTo[B](implicit migration: Migration[A, B]): B =
-      migration.apply(a)
-  }
-
-  implicit def genericMigration[A, B, ARepr <: HList, BRepr <: HList](implicit
-                                                                      aGen: LabelledGeneric.Aux[A, ARepr],
-                                                                      bGen: LabelledGeneric.Aux[B, BRepr],
-                                                                      inter: hlist.Intersection.Aux[ARepr, BRepr, BRepr]
-                                                                     ): Migration[A, B] =
-    a => bGen.from(inter.apply(aGen.to(a)))
-
   implicit def refinedTraceableValue[A: TraceableValue, P]: TraceableValue[A Refined P] = TraceableValue[A].contramap(_.value)
 
-  type SqlIdentifierPredicate = MatchesRegex[W.`"[A-Za-z][A-Za-z0-9_]*"`.T]
+  type SqlIdentifierPredicate = MatchesRegex["[A-Za-z][A-Za-z0-9_]*"]
+
   type SqlIdentifier = String Refined SqlIdentifierPredicate
-  type GeneratedPasswordPredicate = MatchesRegex[W.`"""[-A-Za-z0-9!"#$%&()*+,./:<=>?@\\[\\]\\\\^_{|}~]+"""`.T]
-  type GeneratedPassword = String Refined GeneratedPasswordPredicate
+  object SqlIdentifier extends RefinedTypeOps[SqlIdentifier, String]
+
+  type GeneratedPasswordPredicate = MatchesRegex["""[-A-Za-z0-9!"#$%&()*+,./:<=>?@\[\]\\^_{|}~]+"""]
 
   type MasterDatabaseUsername = MasterDatabaseUsername.Type
   object MasterDatabaseUsername extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
@@ -63,7 +40,7 @@ package object init {
   object Username extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
   type Password = Password.Type
-  object Password extends NewtypeWrapped[GeneratedPassword] with DerivedCirceCodec {
+  object Password extends NewtypeWrapped[String Refined GeneratedPasswordPredicate] with DerivedCirceCodec {
     implicit val traceableValue: TraceableValue[Password] = TraceableValue[String].contramap(_ => "redacted password")
   }
 
