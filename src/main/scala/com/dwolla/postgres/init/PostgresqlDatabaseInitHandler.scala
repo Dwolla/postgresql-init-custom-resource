@@ -36,10 +36,14 @@ class PostgresqlDatabaseInitHandler
       given Random[F] <- Resource.eval(Random.scalaUtilRandom[F])
       client <- httpClient[F]
       entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
-        XRayEnvironment[F].daemonAddress.toResource.flatMap {
-          case Some(addr) => XRay.entryPoint(addr)
-          case None => XRay.entryPoint[F]()
-        }
+        XRayEnvironment[F]
+          .daemonAddress
+          .flatTap(maybeAddress => Console[F].println(s"found daemonAddress: $maybeAddress"))
+          .toResource
+          .flatMap {
+            case Some(addr) => XRay.entryPoint(addr)
+            case None => XRay.entryPoint[F]()
+          }
       }
       region <- Env[F].get("AWS_REGION").liftEitherT(new RuntimeException("missing AWS_REGION environment variable")).map(AwsRegion(_)).rethrowT.toResource
       awsEnv <- AwsEnvironment.default(client, region)

@@ -46,9 +46,9 @@ object LocalApp extends IOApp {
           ResourceProperties = DatabaseMetadata(
             host = host"localhost",
             port = port"5432",
-            name = Database(SqlIdentifier.unsafeFrom("transactionactivitymonitor")),
-            username = MasterDatabaseUsername(SqlIdentifier.unsafeFrom("root")),
-            password = MasterDatabasePassword(SqlIdentifier.unsafeFrom("root")),
+            name = Database(sqlIdentifier"transactionactivitymonitor"),
+            username = MasterDatabaseUsername(sqlIdentifier"root"),
+            password = MasterDatabasePassword(sqlIdentifier"root"),
             secretIds = List("my-UserConnectionInfo-secret").map(SecretIdType(_)),
           ),
           OldResourceProperties = None,

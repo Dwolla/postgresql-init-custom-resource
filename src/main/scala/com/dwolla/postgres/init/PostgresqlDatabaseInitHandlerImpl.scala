@@ -45,21 +45,27 @@ object PostgresqlDatabaseInitHandlerImpl {
         dbId <- removeUsersFromDatabase(usernames, event.name).inSession(event.host, event.port, event.username, event.password)
       } yield HandlerResponse(dbId, None)
 
-    private def createOrUpdate(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, PhysicalResourceId] =
+    private def databaseScopedCreateOrUpdateOperations(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, Unit] =
       for {
-        db <- databaseAsPhysicalResourceId[InSession[F, *]](input.name)
-        _ <- databaseRepository.createDatabase(input)
+        _ <- databaseRepository.grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin
         _ <- roleRepository.createRole(input.name)
         _ <- userPasswords.traverse { userPassword =>
           userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database)
         }
+      } yield ()
+
+    private def createOrUpdate(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): F[PhysicalResourceId] =
+      for {
+        db <- databaseAsPhysicalResourceId[F](input.name)
+        scope <- databaseRepository.createDatabase(input).inSession(input.host, input.port, input.username, input.password)
+        _ <- databaseScopedCreateOrUpdateOperations(userPasswords, input).inSession(input.host, input.port, input.username, input.password, scope)
       } yield db
 
     private def handleCreateOrUpdate(input: DatabaseMetadata)
-                                    (f: List[UserConnectionInfo] => InSession[F, PhysicalResourceId]): F[PhysicalResourceId] =
+                                    (f: List[UserConnectionInfo] => F[PhysicalResourceId]): F[PhysicalResourceId] =
       for {
         userPasswords <- input.secretIds.traverse(secretsManagerAlg.getSecretAs[UserConnectionInfo])
-        id <- f(userPasswords).inSession(input.host, input.port, input.username, input.password)
+        id <- f(userPasswords)
       } yield id
 
     private def getUsernamesFromSecrets(secretIds: List[SecretIdType], fallback: Username): F[List[Username]] =

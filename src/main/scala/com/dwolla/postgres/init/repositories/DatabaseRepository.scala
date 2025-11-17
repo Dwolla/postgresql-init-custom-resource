@@ -17,11 +17,17 @@ import skunk.implicits.*
 trait DatabaseRepository[F[_]] {
   def createDatabase(db: DatabaseMetadata): F[Database]
   def removeDatabase(database: Database): F[Database]
+  def grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin: F[Unit]
 }
 
 @annotation.experimental
 object DatabaseRepository {
-  given Aspect[DatabaseRepository, TraceableValue, TraceableValue] = Derive.aspect
+  given Aspect[DatabaseRepository, TraceableValue, TraceableValue] = {
+    import com.dwolla.tracing.LowPriorityTraceableValueInstances.unitTraceableValue
+    Derive.aspect
+  }
+
+  val pgadminRole = RoleName(sqlIdentifier"pgadmin")
 
   def apply[F[_] : {MonadCancelThrow, Logger, Trace}]: DatabaseRepository[InSession[F, *]] = new DatabaseRepository[InSession[F, *]] {
     override def createDatabase(db: DatabaseMetadata): Kleisli[F, Session[F], Database] =
@@ -56,6 +62,15 @@ object DatabaseRepository {
         .as(database)
         .recoverUndefinedAs(database)
     }
+
+    override def grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin: InSession[F, Unit] = Kleisli { (session: Session[F]) =>
+      List(
+        DatabaseQueries.grantAllPrivilegesOnAllTablesInSchemaPublicTo(_),
+        DatabaseQueries.alterDefaultPrivilegesToGrantAllPrivilegesOnAllTablesInSchemaPublicTo(_),
+      ).traverse { (f: RoleName => Command[Void]) =>
+        session.execute(f(pgadminRole))
+      }
+    }.void
   }.traceWithInputsAndOutputs
 }
 
@@ -74,4 +89,10 @@ object DatabaseQueries {
   def dropDatabase(database: Database): Command[Void] =
     sql"DROP DATABASE IF EXISTS #${database.value.value}"
       .command
+
+  def grantAllPrivilegesOnAllTablesInSchemaPublicTo(role: RoleName): Command[Void] =
+    sql"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO #${role.value.value}".command
+
+  def alterDefaultPrivilegesToGrantAllPrivilegesOnAllTablesInSchemaPublicTo(role: RoleName): Command[Void] =
+    sql"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO #${role.value.value}".command
 }

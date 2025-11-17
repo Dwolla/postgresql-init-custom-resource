@@ -42,11 +42,29 @@ object CreateSkunkSession {
                   password: MasterDatabasePassword,
                  )
                  (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
+      impl(host, port, username, password, none)
+
+    def inSession(host: Host,
+                  port: Port,
+                  username: MasterDatabaseUsername,
+                  password: MasterDatabasePassword,
+                  database: Database,
+                 )
+                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
+      impl(host, port, username, password, database.some)
+
+    private def impl(host: Host,
+                  port: Port,
+                  username: MasterDatabaseUsername,
+                  password: MasterDatabasePassword,
+                  database: Option[Database],
+                 )
+                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
       CreateSkunkSession[F].single(
         host = host.show,
         port = port.value,
         user = username.value.value,
-        database = "postgres",
+        database = database.map(_.value).getOrElse(sqlIdentifier"postgres").value,
         password = password.value.some,
         ssl = if (host == host"localhost") SSL.None else SSL.System,
       ).use(kleisli.run)

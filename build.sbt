@@ -62,10 +62,13 @@ lazy val `postgresql-init-core` = (project in file("."))
         "com.dwolla" %% "natchez-tagless" % "0.2.6-131-d6a1c7c-SNAPSHOT",
         "org.typelevel" %% "mouse" % "1.4.0",
         "com.comcast" %% "ip4s-core" % "3.7.0",
+        "org.typelevel" %% "literally" % "1.2.0",
         "org.scalameta" %% "munit" % "1.2.1" % Test,
         "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
         "com.dwolla" %% "dwolla-otel-natchez" % "0.2.8" % Test,
+        "org.typelevel" %% "discipline-munit" % "2.0.0" % Test,
+        "org.typelevel" %% "cats-laws" % "2.13.0" % Test,
       )
     },
     buildInfoPackage := "com.dwolla.buildinfo.postgres.init",

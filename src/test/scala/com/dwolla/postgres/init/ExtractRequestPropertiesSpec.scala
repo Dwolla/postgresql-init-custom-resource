@@ -27,8 +27,8 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
       Right(DatabaseMetadata(
         host"database-hostname",
         port"5432",
-        Database(SqlIdentifier.unsafeFrom("mydb")),
-        MasterDatabaseUsername(SqlIdentifier.unsafeFrom("masterdb")),
+        Database(sqlIdentifier"mydb"),
+        MasterDatabaseUsername(sqlIdentifier"masterdb"),
         MasterDatabasePassword("master-pass"),
         List("secret1", "secret2").map(SecretIdType(_)),
       ))
