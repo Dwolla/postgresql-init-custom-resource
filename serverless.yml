@@ -15,6 +15,8 @@ provider:
   iam:
     deploymentRole: "arn:aws:iam::${env:ACCOUNT}:role/cloudformation/deployer/cloudformation-deployer"
     role:
+      managedPolicies:
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
       statements:
         - Effect: Allow
           Action:
