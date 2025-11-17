@@ -1,11 +1,14 @@
 package com.dwolla.postgres.init
 
+import cats.kernel.laws.discipline.SemigroupTests
 import cats.syntax.all.*
 import eu.timepit.refined.refineV
+import munit.DisciplineSuite
 import org.scalacheck.Prop.forAll
 import org.scalacheck.{Arbitrary, Gen, Shrink}
+import org.scalacheck.Arbitrary.arbitrary
 
-class SqlStringRegexSpec extends munit.ScalaCheckSuite {
+class SqlStringRegexSpec extends DisciplineSuite {
   given Shrink[String] = Shrink.shrinkAny
 
   test("strings containing semicolons don't validate") {
@@ -16,17 +19,34 @@ class SqlStringRegexSpec extends munit.ScalaCheckSuite {
     assert(refineV[GeneratedPasswordPredicate]("'").isLeft)
   }
 
-  property("sql identifiers match [A-Za-z][A-Za-z0-9_]*") {
-    given Arbitrary[String] = Arbitrary {
-      for {
+
+  {
+    given Arbitrary[SqlIdentifierTail] = Arbitrary:
+      Gen.stringOf(Gen.oneOf(Gen.alphaChar, Gen.numChar, Gen.const('_')))
+        .flatMap:
+          SqlIdentifierTail.from(_).fold(msg => throw new IllegalArgumentException(msg), Gen.const)
+
+    given Arbitrary[String] = Arbitrary:
+      for
         initial <- Gen.alphaChar
-        tail <- Gen.stringOf(Gen.oneOf(Gen.alphaChar, Gen.numChar, Gen.const('_')))
-      } yield s"$initial$tail"
+        tail <- arbitrary[SqlIdentifierTail]
+      yield s"$initial$tail"
+
+    given Arbitrary[SqlIdentifier] = Arbitrary:
+      arbitrary[String].flatMap:
+        SqlIdentifier.from(_).fold(msg => throw new IllegalArgumentException(msg), Gen.const)
+
+    property("sql identifiers match [A-Za-z][A-Za-z0-9_]*") {
+      forAll { (s: String) =>
+        assertEquals(refineV[SqlIdentifierPredicate](s).map(_.value), s.asRight)
+      }
     }
 
-    forAll { (s: String) =>
-      assertEquals(refineV[SqlIdentifierPredicate](s).map(_.value), s.asRight)
-    }
+    property("SqlIdentifierTails can be appended to SqlIdentifiers"):
+      forAll: (base: SqlIdentifier, tail: SqlIdentifierTail) =>
+        assertEquals(SqlIdentifier.from(base.value |+| tail.value), base.append(tail).asRight)
+
+    checkAll("Semigroup[SqlIdentifier]", SemigroupTests[SqlIdentifier].semigroup)
   }
 
   property("passwords contain the allowed characters") {

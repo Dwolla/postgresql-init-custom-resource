@@ -29,9 +29,9 @@ object RoleRepository {
   given Aspect[RoleRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def roleNameForDatabase(database: Database): RoleName =
-    RoleName(Refined.unsafeApply(database.value + "_role"))
+    RoleName(database.value.append(sqlIdentifierTail"_role"))
 
-  def apply[F[_] : MonadCancelThrow : Logger : Trace]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : {MonadCancelThrow, Logger, Trace}]: RoleRepository[Kleisli[F, Session[F], *]] = new RoleRepository[Kleisli[F, Session[F], *]] {
     override def createRole(database: Database): Kleisli[F, Session[F], Unit] = {
       val role = roleNameForDatabase(database)
 

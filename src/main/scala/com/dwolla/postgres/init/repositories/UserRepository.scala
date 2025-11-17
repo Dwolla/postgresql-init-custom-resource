@@ -28,7 +28,7 @@ object UserRepository {
   given Aspect[UserRepository, TraceableValue, TraceableValue] = Derive.aspect
 
   def usernameForDatabase(database: Database): Username =
-    Username(Refined.unsafeApply(database.value.value))
+    Username(database.value)
 
   def apply[F[_] : {Logger, Temporal, Trace}]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private given [A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
