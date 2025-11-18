@@ -52,6 +52,8 @@ object PostgresqlDatabaseInitHandlerImpl {
         _ <- userPasswords.traverse { userPassword =>
           userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database)
         }
+        usersToRemove <- userRepository.findDefunctUsers(userPasswords.map(_.user), RoleRepository.roleNameForDatabase(input.name))
+        _ <- usersToRemove.traverse_(userRepository.removeUser)
       } yield ()
 
     private def createOrUpdate(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): F[PhysicalResourceId] =

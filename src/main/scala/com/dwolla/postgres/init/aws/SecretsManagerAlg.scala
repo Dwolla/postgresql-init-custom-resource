@@ -5,6 +5,7 @@ import cats.*
 import cats.effect.{Trace as _, *}
 import cats.syntax.all.*
 import cats.tagless.aop.*
+import cats.tagless.Derive
 import com.amazonaws.secretsmanager.*
 import com.dwolla.tagless.WeaveKnot
 import com.dwolla.tracing.syntax.*
@@ -15,46 +16,19 @@ import org.typelevel.log4cats.Logger
 
 trait SecretsManagerAlg[F[_]] {
   def getSecret(secretId: SecretIdType): F[Secret]
-  def getSecretAs[A : Decoder](secretId: SecretIdType): F[A]
+  def getSecretAs[A : {Decoder, TraceableValue}](secretId: SecretIdType): F[A]
 }
 
+@annotation.experimental
 object SecretsManagerAlg {
-  given Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] = new Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] {
-    override def weave[F[_]](af: SecretsManagerAlg[F]): SecretsManagerAlg[Aspect.Weave[F, TraceableValue, TraceableValue, *]] =
-      new SecretsManagerAlg[Aspect.Weave[F, TraceableValue, TraceableValue, *]] {
-        override def getSecret(secretId: SecretIdType): Aspect.Weave[F, TraceableValue, TraceableValue, Secret] =
-          Aspect.Weave(
-            "SecretsManagerAlg",
-            List(List(
-              Aspect.Advice.byValue("secretId", secretId),
-            )),
-            Aspect.Advice("getSecret", af.getSecret(secretId))
-          )
+  given Aspect[SecretsManagerAlg, TraceableValue, TraceableValue] = Derive.aspect
 
-        override def getSecretAs[A: Decoder](secretId: SecretIdType): Aspect.Weave[F, TraceableValue, TraceableValue, A] =
-          Aspect.Weave(
-            "SecretsManagerAlg",
-            List(
-              List(Aspect.Advice.byValue("secretId", secretId)),
-              List(Aspect.Advice.byValue("implicit decoder", Decoder[A].toString)),
-            ),
-            Aspect.Advice("getSecretAs", af.getSecretAs[A](secretId))(using TraceableValue[String].contramap[A](_ => "redacted successfully parsed and decoded secret"))
-          )
-      }
-
-    override def mapK[F[_], G[_]](af: SecretsManagerAlg[F])(fk: F ~> G): SecretsManagerAlg[G] =
-      new SecretsManagerAlg[G] {
-        override def getSecret(secretId: SecretIdType): G[Secret] = fk(af.getSecret(secretId))
-        override def getSecretAs[A: Decoder](secretId: SecretIdType): G[A] = fk(af.getSecretAs[A](secretId))
-      }
-  }
-
-  def apply[F[_] : Async : Logger : Trace](client: SecretsManager[F]): SecretsManagerAlg[F] =
+  def apply[F[_] : {Async, Logger, Trace}](client: SecretsManager[F]): SecretsManagerAlg[F] =
     WeaveKnot[SecretsManagerAlg, F](apply(client, _))(_.traceWithInputsAndOutputs)
 
-  private def apply[F[_] : Async : Logger](client: SecretsManager[F],
-                                   self: Eval[SecretsManagerAlg[F]],
-                                  ): SecretsManagerAlg[F] = new SecretsManagerAlg[F] {
+  private def apply[F[_] : {Async, Logger}](client: SecretsManager[F],
+                                            self: Eval[SecretsManagerAlg[F]],
+                                           ): SecretsManagerAlg[F] = new SecretsManagerAlg[F] {
     private val parser = new JawnParser
 
     override def getSecret(secretId: SecretIdType): F[Secret] =
@@ -71,7 +45,7 @@ object SecretsManagerAlg {
               NoSecretInResponseException(secretId).raiseError[F, Secret]
           }
 
-    override def getSecretAs[A: Decoder](secretId: SecretIdType): F[A] =
+    override def getSecretAs[A : {Decoder, TraceableValue}](secretId: SecretIdType): F[A] =
       self.value.getSecret(secretId)
         .flatMap {
           case SecretString(SecretStringType(value)) => parser.parse(value).liftTo[F]
