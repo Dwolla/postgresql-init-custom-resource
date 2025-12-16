@@ -21,11 +21,16 @@ import scala.concurrent.duration.*
 trait UserRepository[F[_]] {
   def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): F[Username]
   def removeUser(username: Username): F[Username]
+  def findDefunctUsers(usersThatShouldExist: List[Username], role: RoleName): F[List[Username]]
 }
 
 @annotation.experimental
 object UserRepository {
-  given Aspect[UserRepository, TraceableValue, TraceableValue] = Derive.aspect
+  given Aspect[UserRepository, TraceableValue, TraceableValue] = {
+    given TraceableValue[List[Username]] = TraceableValue[String].contramap(_.mkString("[", ", ", "]"))
+
+    Derive.aspect
+  }
 
   def usernameForDatabase(database: Database): Username =
     Username(database.value)
@@ -82,12 +87,22 @@ object UserRepository {
 
     override def removeUser(username: Username): Kleisli[F, Session[F], Username] =
       removeUser(username, 5)
+
+    override def findDefunctUsers(usersThatShouldExist: List[Username],
+                                  roleName: RoleName,
+                                 ): Kleisli[F, Session[F], List[Username]] =
+      Kleisli[F, Session[F], List[Username]] {
+        _.execute(UserQueries.findDefunctUsers(usersThatShouldExist))(usersThatShouldExist *: roleName *: EmptyTuple)
+      }
   }.traceWithInputsAndOutputs
 }
 
 object UserQueries {
   private val username: skunk.Codec[Username] =
     name.eimap[Username](refineV[SqlIdentifierPredicate](_).map(Username(_)))(_.value.value)
+
+  private val roleName: skunk.Codec[RoleName] =
+    name.eimap[RoleName](refineV[SqlIdentifierPredicate](_).map(RoleName(_)))(_.value.value)
 
   val checkUserExists: Query[Username, Username] =
     sql"SELECT u.usename FROM pg_catalog.pg_user u WHERE u.usename = $username"
@@ -106,4 +121,20 @@ object UserQueries {
   def removeUser(username: Username): Command[Void] =
     sql"DROP USER IF EXISTS #${username.value.value}"
       .command
+
+  def findDefunctUsers(users: List[Username]): Query[users.type *: RoleName *: EmptyTuple, Username] =
+    sql"""
+      WITH expected(role_name) AS (VALUES (${username.list(users)}))
+      SELECT
+          m.rolname AS user_name
+      FROM pg_auth_members rm
+               JOIN pg_roles r ON r.oid = rm.roleid
+               JOIN pg_roles m ON m.oid = rm.member
+      WHERE r.rolname = $roleName
+        AND m.rolcanlogin = TRUE
+        AND m.rolname NOT IN (SELECT role_name FROM expected)
+      ORDER BY user_name;
+     """
+      .query(username)
+
 }
