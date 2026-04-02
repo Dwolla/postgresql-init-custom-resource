@@ -61,7 +61,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.2",
         "com.dwolla" %% "natchez-tagless" % "0.2.6-142-0f683eb-SNAPSHOT",
         "org.typelevel" %% "mouse" % "1.4.0",
-        "com.comcast" %% "ip4s-core" % "3.7.0",
+        "com.comcast" %% "ip4s-core" % "3.8.0",
         "org.typelevel" %% "literally" % "1.2.0",
         "org.scalameta" %% "munit" % "1.2.1" % Test,
         "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
