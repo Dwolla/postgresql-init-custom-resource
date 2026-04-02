@@ -40,7 +40,7 @@ lazy val `postgresql-init-core` = (project in file("."))
     maintainer := developers.value.head.email,
     topLevelDirectory := None,
     libraryDependencies ++= {
-      val natchezVersion = "0.3.8"
+      val natchezVersion = "0.3.9"
       val feralVersion = "0.3.1-79-260ee83-SNAPSHOT"
 
       Seq(
