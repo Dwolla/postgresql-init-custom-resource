@@ -46,7 +46,7 @@ lazy val `postgresql-init-core` = (project in file("."))
       Seq(
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
-        "org.tpolecat" %% "natchez-http4s" % "0.6.1",
+        "org.tpolecat" %% "natchez-http4s" % "0.6.2",
         "org.typelevel" %% "cats-tagless-core" % "0.16.4",
         "org.http4s" %% "http4s-ember-client" % "0.23.33",
         "io.circe" %% "circe-parser" % circeV,
