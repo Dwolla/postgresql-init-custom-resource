@@ -33,7 +33,7 @@ ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
-lazy val circeV = "0.14.15"
+lazy val circeV = "0.14.16"
 
 lazy val `postgresql-init-core` = (project in file("."))
   .settings(
