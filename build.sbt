@@ -2,7 +2,7 @@ ThisBuild / organization := "com.dwolla"
 ThisBuild / description := "CloudFormation custom resource to initialize a PostgreSQL database with a new user"
 ThisBuild / homepage := Some(url("https://github.com/Dwolla/postgresql-init-custom-resource"))
 ThisBuild / licenses += ("MIT", url("https://opensource.org/licenses/MIT"))
-ThisBuild / scalaVersion := "3.7.4"
+ThisBuild / scalaVersion := "3.8.4"
 ThisBuild / developers := List(
   Developer(
     "bpholt",
