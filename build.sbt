@@ -64,7 +64,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "com.comcast" %% "ip4s-core" % "3.8.0",
         "org.typelevel" %% "literally" % "1.2.0",
         "org.scalameta" %% "munit" % "1.2.4" % Test,
-        "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
+        "org.scalameta" %% "munit-scalacheck" % "1.3.1" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
         "com.dwolla" %% "dwolla-otel-natchez" % "0.2.8" % Test,
         "org.typelevel" %% "discipline-munit" % "2.0.0" % Test,
