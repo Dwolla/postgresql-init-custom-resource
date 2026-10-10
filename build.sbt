@@ -66,7 +66,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.scalameta" %% "munit" % "1.2.1" % Test,
         "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
-        "com.dwolla" %% "dwolla-otel-natchez" % "0.2.8" % Test,
+        "com.dwolla" %% "dwolla-otel-natchez" % "0.2.9" % Test,
         "org.typelevel" %% "discipline-munit" % "2.0.0" % Test,
         "org.typelevel" %% "cats-laws" % "2.13.0" % Test,
       )
