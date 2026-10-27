@@ -18,6 +18,7 @@ trait DatabaseRepository[F[_]] {
   def createDatabase(db: DatabaseMetadata): F[Database]
   def removeDatabase(database: Database): F[Database]
   def grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin: F[Unit]
+  def createExtension(extension: ExtensionName): F[Unit]
 }
 
 @annotation.experimental
@@ -71,6 +72,15 @@ object DatabaseRepository {
         session.execute(f(pgadminRole))
       }
     }.void
+
+    override def createExtension(extension: ExtensionName): InSession[F, Unit] = Kleisli {
+      _
+        .execute(DatabaseQueries.createExtension(extension))
+        .flatTap { completion =>
+          Logger[F].info(s"created extension $extension with status $completion")
+        }
+        .void
+    }
   }.traceWithInputsAndOutputs
 }
 
@@ -95,4 +105,7 @@ object DatabaseQueries {
 
   def alterDefaultPrivilegesToGrantAllPrivilegesOnAllTablesInSchemaPublicTo(role: RoleName): Command[Void] =
     sql"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO #${role.value.value}".command
+
+  def createExtension(extension: ExtensionName): Command[Void] =
+    sql"""CREATE EXTENSION IF NOT EXISTS "#${extension.value.value}"""".command
 }

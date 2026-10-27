@@ -36,4 +36,48 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
 
   }
 
+  test("ExtractRequestProperties can decode Extensions") {
+
+    val input =
+      json"""{
+               "DatabaseName": "mydb",
+               "Host": "database-hostname",
+               "Port": "5432",
+               "MasterDatabaseUsername": "masterdb",
+               "MasterDatabasePassword": "master-pass",
+               "UserConnectionSecrets": [
+                 "secret1"
+               ],
+               "Extensions": [
+                 "vector",
+                 "uuid-ossp"
+               ]
+             }"""
+
+    assertEquals(
+      Decoder[DatabaseMetadata].decodeJson(input).map(_.extensions.map(_.value.value)),
+      Right(List("vector", "uuid-ossp"))
+    )
+
+  }
+
+  test("ExtractRequestProperties rejects invalid extension names") {
+
+    val input =
+      json"""{
+               "DatabaseName": "mydb",
+               "Host": "database-hostname",
+               "Port": "5432",
+               "MasterDatabaseUsername": "masterdb",
+               "MasterDatabasePassword": "master-pass",
+               "UserConnectionSecrets": [],
+               "Extensions": [
+                 "vector\"; DROP DATABASE mydb; --"
+               ]
+             }"""
+
+    assert(Decoder[DatabaseMetadata].decodeJson(input).isLeft)
+
+  }
+
 }

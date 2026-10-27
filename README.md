@@ -32,6 +32,10 @@ database (using the template `{DatabaseName}_role` for the role name) and a
 user with which to connect to the database (using the database name as
 the username).
 
+The optional `Extensions` property lists PostgreSQL extensions to install in the
+database with `CREATE EXTENSION IF NOT EXISTS`, using the master credentials.
+Removing an extension from the list does not drop it from the database.
+
 ```json
 "DatabaseMydb": {
   "Properties": {
@@ -47,6 +51,7 @@ the username).
     "UserConnectionSecrets": [
       {"Ref": "PasswordForMydbUser1"}
     ],
+    "Extensions": ["vector"],
     "ServiceToken": {
       "Fn::ImportValue": "postgresql-init-custom-resource:Stage:InitPostgresDatabaseArn"
     }

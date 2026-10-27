@@ -73,6 +73,11 @@ object Password extends NewtypeWrapped[String Refined GeneratedPasswordPredicate
 type Database = Database.Type
 object Database extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
+type ExtensionNamePredicate = MatchesRegex["[a-z][a-z0-9_-]*"]
+
+type ExtensionName = ExtensionName.Type
+object ExtensionName extends NewtypeWrapped[String Refined ExtensionNamePredicate] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
+
 type RoleName = RoleName.Type
 object RoleName extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 

@@ -48,6 +48,7 @@ object PostgresqlDatabaseInitHandlerImpl {
     private def databaseScopedCreateOrUpdateOperations(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, Unit] =
       for {
         _ <- databaseRepository.grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin
+        _ <- input.extensions.traverse(databaseRepository.createExtension)
         _ <- roleRepository.createRole(input.name)
         _ <- userPasswords.traverse { userPassword =>
           userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database)
