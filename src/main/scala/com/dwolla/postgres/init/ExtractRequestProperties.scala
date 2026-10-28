@@ -16,6 +16,7 @@ case class DatabaseMetadata(host: Host,
                             username: MasterDatabaseUsername,
                             password: MasterDatabasePassword,
                             secretIds: List[SecretIdType],
+                            extensions: List[ExtensionName] = List.empty,
                            )
 
 object DatabaseMetadata {
@@ -26,6 +27,7 @@ object DatabaseMetadata {
       c.downField("MasterDatabaseUsername").asAcc[MasterDatabaseUsername],
       c.downField("MasterDatabasePassword").asAcc[MasterDatabasePassword],
       c.downField("UserConnectionSecrets").asAcc[List[String]].nested.map(SecretIdType(_)).value,
+      c.downField("Extensions").asAcc[Option[List[ExtensionName]]].map(_.orEmpty),
     ).mapN(DatabaseMetadata.apply)
   }
 
@@ -36,7 +38,8 @@ object DatabaseMetadata {
           "DatabaseName": ${dm.name.toTraceValue},
           "MasterDatabaseUsername": ${dm.username.toTraceValue},
           "MasterDatabasePassword": ${dm.password.toTraceValue},
-          "UserConnectionSecrets": ${dm.secretIds.map(_.toTraceValue)}
+          "UserConnectionSecrets": ${dm.secretIds.map(_.toTraceValue)},
+          "Extensions": ${dm.extensions.map(_.toTraceValue)}
         }""".noSpaces
   }
 }

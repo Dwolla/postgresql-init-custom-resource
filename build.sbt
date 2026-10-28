@@ -28,27 +28,28 @@ lazy val smithy = (project in file("smithy"))
     smithy4sAwsSpecs ++= Seq(AWS.secretsManager)
   )
 
+ThisBuild / tlJdkRelease := Some(17)
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
 ThisBuild / githubWorkflowPublish := Seq.empty
 
-lazy val circeV = "0.14.15"
+lazy val circeV = "0.14.17"
 
 lazy val `postgresql-init-core` = (project in file("."))
   .settings(
     maintainer := developers.value.head.email,
     topLevelDirectory := None,
     libraryDependencies ++= {
-      val natchezVersion = "0.3.8"
-      val feralVersion = "0.3.1-79-260ee83-SNAPSHOT"
+      val natchezVersion = "0.3.10"
+      val feralVersion = "0.3.1"
 
       Seq(
         "org.typelevel" %% "feral-lambda-cloudformation-custom-resource" % feralVersion,
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
-        "org.tpolecat" %% "natchez-http4s" % "0.6.1",
-        "org.typelevel" %% "cats-tagless-core" % "0.16.4",
-        "org.http4s" %% "http4s-ember-client" % "0.23.33",
+        "org.tpolecat" %% "natchez-http4s" % "0.6.2",
+        "org.typelevel" %% "cats-tagless-core" % "0.16.5",
+        "org.http4s" %% "http4s-ember-client" % "0.23.38",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-literal" % circeV,
@@ -56,21 +57,26 @@ lazy val `postgresql-init-core` = (project in file("."))
         "io.monix" %% "newtypes-core" % "0.3.0",
         "io.monix" %% "newtypes-circe-v0-14" % "0.3.0",
         "org.tpolecat" %% "skunk-core" % "0.6.5",
-        "org.typelevel" %% "log4cats-slf4j" % "2.7.1",
-        "com.amazonaws" % "aws-lambda-java-log4j2" % "1.6.0",
-        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.2",
-        "com.dwolla" %% "natchez-tagless" % "0.2.6-142-0f683eb-SNAPSHOT",
+        "org.typelevel" %% "log4cats-slf4j" % "2.8.0",
+        "com.amazonaws" % "aws-lambda-java-log4j2" % "1.6.5",
+        "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.5",
+        "com.dwolla" %% "natchez-tagless" % "0.2.7",
         "org.typelevel" %% "mouse" % "1.4.0",
-        "com.comcast" %% "ip4s-core" % "3.7.0",
+        "com.comcast" %% "ip4s-core" % "3.8.0",
         "org.typelevel" %% "literally" % "1.2.0",
-        "org.scalameta" %% "munit" % "1.2.1" % Test,
-        "org.scalameta" %% "munit-scalacheck" % "1.2.0" % Test,
+        "org.scalameta" %% "munit" % "1.2.4" % Test,
+        "org.scalameta" %% "munit-scalacheck" % "1.3.1" % Test,
         "io.circe" %% "circe-literal" % circeV % Test,
-        "com.dwolla" %% "dwolla-otel-natchez" % "0.2.8" % Test,
+        "com.dwolla" %% "dwolla-otel-natchez" % "0.2.11" % Test,
         "org.typelevel" %% "discipline-munit" % "2.0.0" % Test,
         "org.typelevel" %% "cats-laws" % "2.13.0" % Test,
       )
     },
+    dependencyOverrides ++= Seq(
+      "org.http4s" %% "http4s-circe" % "0.23.38",
+      "io.circe" %% "circe-scodec" % circeV,
+      "com.amazonaws" % "aws-lambda-java-core" % "1.4.1",
+    ),
     buildInfoPackage := "com.dwolla.buildinfo.postgres.init",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   )
