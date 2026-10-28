@@ -5,6 +5,8 @@ import cats.syntax.all.*
 import com.comcast.ip4s.{Host, Port}
 import eu.timepit.refined.*
 import eu.timepit.refined.api.*
+import eu.timepit.refined.boolean.*
+import eu.timepit.refined.collection.*
 import eu.timepit.refined.string.*
 import io.circe.Decoder
 import monix.newtypes.integrations.DerivedCirceCodec
@@ -73,7 +75,7 @@ object Password extends NewtypeWrapped[String Refined GeneratedPasswordPredicate
 type Database = Database.Type
 object Database extends NewtypeWrapped[SqlIdentifier] with DerivedCirceCodec with DerivedTraceableValueFromNewtype
 
-type ExtensionNamePredicate = MatchesRegex["[a-z][a-z0-9_-]*"]
+type ExtensionNamePredicate = MatchesRegex["[a-z][a-z0-9_-]*"] And MaxSize[63]
 
 type ExtensionName = ExtensionName.Type
 object ExtensionName extends NewtypeWrapped[String Refined ExtensionNamePredicate] with DerivedCirceCodec with DerivedTraceableValueFromNewtype

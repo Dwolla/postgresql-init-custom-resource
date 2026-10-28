@@ -107,5 +107,5 @@ object DatabaseQueries {
     sql"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO #${role.value.value}".command
 
   def createExtension(extension: ExtensionName): Command[Void] =
-    sql"""CREATE EXTENSION IF NOT EXISTS "#${extension.value.value}"""".command
+    sql"""CREATE EXTENSION IF NOT EXISTS "#${extension.value.value}" CASCADE""".command
 }

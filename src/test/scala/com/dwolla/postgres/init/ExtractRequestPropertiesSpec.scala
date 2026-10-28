@@ -2,7 +2,7 @@ package com.dwolla.postgres.init
 
 import com.amazonaws.secretsmanager.SecretIdType
 import com.comcast.ip4s.*
-import io.circe.Decoder
+import io.circe.{CursorOp, Decoder}
 import io.circe.literal.*
 
 class ExtractRequestPropertiesSpec extends munit.FunSuite {
@@ -76,7 +76,10 @@ class ExtractRequestPropertiesSpec extends munit.FunSuite {
                ]
              }"""
 
-    assert(Decoder[DatabaseMetadata].decodeJson(input).isLeft)
+    val failure = Decoder[DatabaseMetadata].decodeJson(input)
+      .fold(identity, metadata => fail(s"expected decoding to fail, but got $metadata"))
+
+    assert(failure.history.contains(CursorOp.DownField("Extensions")), failure.history)
 
   }
 

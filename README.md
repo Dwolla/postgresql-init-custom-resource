@@ -33,7 +33,8 @@ user with which to connect to the database (using the database name as
 the username).
 
 The optional `Extensions` property lists PostgreSQL extensions to install in the
-database with `CREATE EXTENSION IF NOT EXISTS`, using the master credentials.
+database with `CREATE EXTENSION IF NOT EXISTS … CASCADE`, using the master
+credentials, so any extensions they depend on are installed too.
 Removing an extension from the list does not drop it from the database.
 
 ```json

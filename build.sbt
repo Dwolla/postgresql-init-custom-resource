@@ -50,9 +50,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.tpolecat" %% "natchez-http4s" % "0.6.2",
         "org.typelevel" %% "cats-tagless-core" % "0.16.5",
         "org.http4s" %% "http4s-ember-client" % "0.23.38",
-        "org.http4s" %% "http4s-circe" % "0.23.38",
         "io.circe" %% "circe-parser" % circeV,
-        "io.circe" %% "circe-scodec" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-literal" % circeV,
         "io.circe" %% "circe-refined" % "0.15.1",
@@ -60,7 +58,6 @@ lazy val `postgresql-init-core` = (project in file("."))
         "io.monix" %% "newtypes-circe-v0-14" % "0.3.0",
         "org.tpolecat" %% "skunk-core" % "0.6.5",
         "org.typelevel" %% "log4cats-slf4j" % "2.8.0",
-        "com.amazonaws" % "aws-lambda-java-core" % "1.4.1",
         "com.amazonaws" % "aws-lambda-java-log4j2" % "1.6.5",
         "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.25.5",
         "com.dwolla" %% "natchez-tagless" % "0.2.7",
@@ -75,6 +72,11 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.typelevel" %% "cats-laws" % "2.13.0" % Test,
       )
     },
+    dependencyOverrides ++= Seq(
+      "org.http4s" %% "http4s-circe" % "0.23.38",
+      "io.circe" %% "circe-scodec" % circeV,
+      "com.amazonaws" % "aws-lambda-java-core" % "1.4.1",
+    ),
     buildInfoPackage := "com.dwolla.buildinfo.postgres.init",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
   )
