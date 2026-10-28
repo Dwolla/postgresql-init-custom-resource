@@ -28,6 +28,7 @@ lazy val smithy = (project in file("smithy"))
     smithy4sAwsSpecs ++= Seq(AWS.secretsManager)
   )
 
+ThisBuild / tlJdkRelease := Some(17)
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 ThisBuild / githubWorkflowTargetTags ++= Seq("v*")
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty
