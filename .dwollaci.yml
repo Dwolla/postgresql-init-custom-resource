@@ -1,12 +1,12 @@
 stages:
   build:
-    nodeLabel: sbt
+    nodeLabel: sbt-jdk17
     steps:
       - sbt Universal/packageBin
     filesToStash:
       - '**'
   publish:
-    nodeLabel: nvm-sbt-deployer
+    nodeLabel: nvm-sbt-jdk17-deployer
     steps:
       - |
         . ${NVM_DIR}/nvm.sh --no-use
@@ -14,7 +14,7 @@ stages:
         npm install -g npm && npm install -g serverless@3
         sbt "deploy Admin"
   deployDevInt:
-    nodeLabel: nvm-sbt-deployer
+    nodeLabel: nvm-sbt-jdk17-deployer
     steps:
       - |
         . ${NVM_DIR}/nvm.sh --no-use
@@ -22,7 +22,7 @@ stages:
         npm install -g npm && npm install -g serverless@3
         sbt "deploy DevInt"
   deployUat:
-    nodeLabel: nvm-sbt-deployer
+    nodeLabel: nvm-sbt-jdk17-deployer
     steps:
       - |
         . ${NVM_DIR}/nvm.sh --no-use
@@ -30,7 +30,7 @@ stages:
         npm install -g npm && npm install -g serverless@3
         sbt "deploy Uat"
   deployProd:
-    nodeLabel: nvm-sbt-deployer
+    nodeLabel: nvm-sbt-jdk17-deployer
     steps:
       - |
         . ${NVM_DIR}/nvm.sh --no-use

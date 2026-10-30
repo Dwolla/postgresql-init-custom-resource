@@ -49,6 +49,41 @@ class SqlStringRegexSpec extends DisciplineSuite {
     checkAll("Semigroup[SqlIdentifier]", SemigroupTests[SqlIdentifier].semigroup)
   }
 
+  {
+    val extensionNameTail: Gen[Char] = Gen.oneOf(Gen.alphaLowerChar, Gen.numChar, Gen.const('_'), Gen.const('-'))
+
+    property("extension names of up to 63 lowercase letters, digits, underscores, and hyphens are valid") {
+      forAll(Gen.alphaLowerChar, Gen.choose(0, 62).flatMap(Gen.listOfN(_, extensionNameTail))) { (initial, tail) =>
+        val s = (initial :: tail).mkString
+        assertEquals(refineV[ExtensionNamePredicate](s).map(_.value), s.asRight)
+      }
+    }
+
+    property("extension names containing any other character are invalid") {
+      val allowed: Set[Char] = ('a' to 'z').toSet ++ ('0' to '9') + '_' + '-'
+      val disallowed: Gen[Char] = Gen.frequency(
+        9 -> Gen.oneOf((' ' to '~').filterNot(allowed)),
+        1 -> arbitrary[Char].suchThat(c => !allowed(c)),
+      )
+
+      forAll(Gen.alphaLowerChar, Gen.listOf(extensionNameTail), disallowed, Gen.listOf(extensionNameTail)) { (initial, before, bad, after) =>
+        assert(refineV[ExtensionNamePredicate]((initial :: before ::: bad :: after).mkString).isLeft)
+      }
+    }
+
+    property("extension names that don't start with a lowercase letter are invalid") {
+      forAll(Gen.oneOf(Gen.numChar, Gen.const('_'), Gen.const('-'), Gen.alphaUpperChar), Gen.listOf(extensionNameTail)) { (initial, tail) =>
+        assert(refineV[ExtensionNamePredicate]((initial :: tail).mkString).isLeft)
+      }
+    }
+
+    property("extension names longer than 63 characters are invalid") {
+      forAll(Gen.alphaLowerChar, Gen.choose(63, 200).flatMap(Gen.listOfN(_, extensionNameTail))) { (initial, tail) =>
+        assert(refineV[ExtensionNamePredicate]((initial :: tail).mkString).isLeft)
+      }
+    }
+  }
+
   property("passwords contain the allowed characters") {
     given Arbitrary[String] = Arbitrary {
       val allowedPunctuation: Gen[Char] = Gen.oneOf("""! " # $ % & ( ) * + , - . / : < = > ? @ [ \ ] ^ _ { | } ~ """.replaceAll(" ", "").toList)
