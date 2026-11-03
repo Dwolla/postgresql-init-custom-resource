@@ -41,7 +41,7 @@ object CreateSkunkSession {
                   username: MasterDatabaseUsername,
                   password: MasterDatabasePassword,
                  )
-                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
+                 (using CreateSkunkSession[F], MonadCancelThrow[F], Trace[F]): F[A] =
       impl(host, port, username, password, none)
 
     def inSession(host: Host,
@@ -50,24 +50,27 @@ object CreateSkunkSession {
                   password: MasterDatabasePassword,
                   database: Database,
                  )
-                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
+                 (using CreateSkunkSession[F], MonadCancelThrow[F], Trace[F]): F[A] =
       impl(host, port, username, password, database.some)
 
     private def impl(host: Host,
-                  port: Port,
-                  username: MasterDatabaseUsername,
-                  password: MasterDatabasePassword,
-                  database: Option[Database],
-                 )
-                 (using CreateSkunkSession[F], MonadCancelThrow[F]): F[A] =
-      CreateSkunkSession[F].single(
-        host = host.show,
-        port = port.value,
-        user = username.value.value,
-        database = database.map(_.value).getOrElse(sqlIdentifier"postgres").value,
-        password = password.value.some,
-        ssl = if (host == host"localhost") SSL.None else SSL.System,
-      ).use(kleisli.run)
+                     port: Port,
+                     username: MasterDatabaseUsername,
+                     password: MasterDatabasePassword,
+                     database: Option[Database],
+                    )
+                    (using CreateSkunkSession[F], MonadCancelThrow[F], Trace[F]): F[A] =
+      Trace[F].span("database.session") {
+        Trace[F].put("database" -> database.map(_.value).getOrElse(sqlIdentifier"postgres").value) >>
+          CreateSkunkSession[F].single(
+            host = host.show,
+            port = port.value,
+            user = username.value.value,
+            database = database.map(_.value).getOrElse(sqlIdentifier"postgres").value,
+            password = password.value.some,
+            ssl = if (host == host"localhost") SSL.None else SSL.System,
+          ).use(kleisli.run)
+      }
 
   extension [F[_], A](fa: F[A])
     def recoverUndefinedAs(a: A)
