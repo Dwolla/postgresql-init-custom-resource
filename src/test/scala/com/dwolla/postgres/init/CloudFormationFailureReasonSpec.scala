@@ -4,15 +4,15 @@ import cats.data.Kleisli
 import cats.effect.*
 import cats.effect.testkit.TestControl
 import cats.syntax.all.*
-import com.amazonaws.secretsmanager.SecretIdType
+import com.amazonaws.secretsmanager.{SecretIdType, SecretStringType}
 import com.comcast.ip4s.*
-import com.dwolla.postgres.init.aws.{Secret, SecretsManagerAlg}
+import com.dwolla.postgres.init.aws.{Secret, SecretString, SecretsManagerAlg}
 import com.dwolla.postgres.init.repositories.*
 import com.dwolla.postgres.init.repositories.CreateSkunkSession.InSession
 import feral.lambda.cloudformation.*
 import feral.lambda.{Context, Invocation}
 import io.circe.syntax.*
-import io.circe.{Decoder, Errors, Json}
+import io.circe.{Decoder, Json}
 import munit.CatsEffectSuite
 import natchez.Trace.Implicits.noop
 import org.http4s.client.Client
@@ -71,7 +71,7 @@ class CloudFormationFailureReasonSpec extends CatsEffectSuite {
       assertEquals(response.hcursor.get[String]("Status"), Right("FAILED"))
       assertEquals(
         response.hcursor.get[String]("Reason"),
-        Right("reading secret made-up-secret-id failed: Errors")
+        Right("reading secret made-up-secret-id failed: could not decode .password")
       )
       assertEquals(markersIn(response), List.empty[String])
     }
@@ -135,7 +135,7 @@ class CloudFormationFailureReasonSpec extends CatsEffectSuite {
       IO.raiseError(new UnsupportedOperationException("not used by these tests"))
 
     override def getSecretAs[A: Decoder](secretId: SecretIdType): IO[A] =
-      secret.asAccumulating[A].toEither.leftMap(Errors(_)).liftTo[IO]
+      SecretsManagerAlg.decodeSecret[A](SecretString(SecretStringType(secret.noSpaces))).liftTo[IO]
   }
 
   private def secretsFailingWith(error: Throwable): SecretsManagerAlg[IO] = new SecretsManagerAlg[IO] {

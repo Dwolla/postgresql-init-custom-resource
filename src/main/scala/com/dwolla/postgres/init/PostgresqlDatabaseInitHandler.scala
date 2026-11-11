@@ -1,6 +1,6 @@
 package com.dwolla.postgres.init
 
-import cats.effect.std.{Console, Env, Random}
+import cats.effect.std.{Console, Env, Random, SecureRandom}
 import cats.effect.syntax.all.*
 import cats.effect.{Trace as _, *}
 import cats.mtl.Local
@@ -34,6 +34,7 @@ class PostgresqlDatabaseInitHandler
     for {
       given Logger[F] <- Resource.eval(Slf4jLogger.create[F])
       given Random[F] <- Resource.eval(Random.scalaUtilRandom[F])
+      given SecureRandom[F] <- SecureRandom.javaSecuritySecureRandom[F].toResource
       client <- PostgresqlDatabaseInitHandler.httpClient[F]
       entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
         XRayEnvironment[F]

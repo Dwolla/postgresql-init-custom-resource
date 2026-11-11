@@ -2,6 +2,7 @@ package com.dwolla.postgres.init
 package repositories
 
 import cats.data.*
+import cats.effect.std.SecureRandom
 import cats.effect.{Trace as _, *}
 import cats.syntax.all.*
 import cats.tagless.Derive
@@ -30,22 +31,23 @@ object UserRepository {
   def usernameForDatabase(database: Database): Username =
     Username(database.value)
 
-  def apply[F[_] : {Logger, Temporal, Trace}]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
+  def apply[F[_] : {Logger, Temporal, Trace, SecureRandom}]: UserRepository[Kleisli[F, Session[F], *]] = new UserRepository[Kleisli[F, Session[F], *]] {
     private given [A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
 
     override def addOrUpdateUser(userConnectionInfo: UserConnectionInfo): Kleisli[F, Session[F], Username] =
       for {
-        upsert <- determineCommandFor(userConnectionInfo.user, userConnectionInfo.password)
+        verifier <- Kleisli.liftF(ScramSha256Verifier.generate[F](userConnectionInfo.password))
+        upsert <- determineCommandFor(userConnectionInfo.user, verifier)
         _ <- applyUsernameAndPassword(userConnectionInfo.user)(upsert)
       } yield userConnectionInfo.user
 
     private def determineCommandFor(username: Username,
-                                    password: Password): Kleisli[F, Session[F], Command[Void]] = Kleisli {
+                                    verifier: ScramSha256Verifier): Kleisli[F, Session[F], Command[Void]] = Kleisli {
       _
         .option(UserQueries.checkUserExists)(username)
         .flatMap {
-          case Some(_) => Logger[F].info(s"Found and updating user named $username").as(UserQueries.updateUser(username, password))
-          case None => Logger[F].info(s"Creating user $username").as(UserQueries.createUser(username, password))
+          case Some(_) => Logger[F].info(s"Found and updating user named $username").as(UserQueries.updateUser(username, verifier))
+          case None => Logger[F].info(s"Creating user $username").as(UserQueries.createUser(username, verifier))
         }
     }
 
@@ -94,13 +96,13 @@ object UserQueries {
       .query(username)
 
   def createUser(username: Username,
-                 password: Password): Command[Void] =
-    sql"CREATE USER #${username.value.value} WITH PASSWORD '#${password.value.value}'"
+                 verifier: ScramSha256Verifier): Command[Void] =
+    sql"CREATE USER #${username.value.value} WITH PASSWORD '#${verifier.value}'"
       .command
 
   def updateUser(username: Username,
-                 password: Password): Command[Void] =
-    sql"ALTER USER #${username.value.value} WITH PASSWORD '#${password.value.value}'"
+                 verifier: ScramSha256Verifier): Command[Void] =
+    sql"ALTER USER #${username.value.value} WITH PASSWORD '#${verifier.value}'"
       .command
 
   def removeUser(username: Username): Command[Void] =

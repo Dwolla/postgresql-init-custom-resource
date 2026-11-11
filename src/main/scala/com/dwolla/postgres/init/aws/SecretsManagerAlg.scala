@@ -9,7 +9,7 @@ import com.amazonaws.secretsmanager.*
 import com.dwolla.tagless.WeaveKnot
 import com.dwolla.tracing.syntax.*
 import io.circe.jawn.JawnParser
-import io.circe.{Decoder, Errors}
+import io.circe.{CursorOp, Decoder}
 import natchez.{Trace, TraceableValue}
 import org.typelevel.log4cats.Logger
 
@@ -55,8 +55,6 @@ object SecretsManagerAlg {
   private def apply[F[_] : Async : Logger](client: SecretsManager[F],
                                    self: Eval[SecretsManagerAlg[F]],
                                   ): SecretsManagerAlg[F] = new SecretsManagerAlg[F] {
-    private val parser = new JawnParser
-
     override def getSecret(secretId: SecretIdType): F[Secret] =
       Logger[F].info(s"retrieving secret id $secretId") >>
         client.getSecretValue(secretId)
@@ -73,17 +71,28 @@ object SecretsManagerAlg {
 
     override def getSecretAs[A: Decoder](secretId: SecretIdType): F[A] =
       self.value.getSecret(secretId)
-        .flatMap {
-          case SecretString(SecretStringType(value)) => parser.parse(value).liftTo[F]
-          case SecretBinary(SecretBinaryType(value)) => parser.parseByteBuffer(value.asByteBuffer).liftTo[F]
-        }
-        .flatMap {
-          _.asAccumulating[A]
-            .toEither
-            .leftMap(Errors(_))
-            .liftTo[F]
-        }
+        .flatMap(decodeSecret[A](_).liftTo[F])
   }
+
+  private val parser = new JawnParser
+
+  /**
+   * Decodes a secret's JSON. A failure names the fields that did not decode; its message holds
+   * none of the secret's text, since parse and decoding errors quote the input they reject.
+   */
+  def decodeSecret[A: Decoder](secret: Secret): Either[SecretNotDecoded, A] =
+    (secret match {
+      case SecretString(SecretStringType(value)) => parser.parse(value)
+      case SecretBinary(SecretBinaryType(value)) => parser.parseByteBuffer(value.asByteBuffer)
+    })
+      .leftMap(_ => SecretNotDecoded("the secret is not JSON"))
+      .flatMap {
+        _.asAccumulating[A]
+          .toEither
+          .leftMap { failures =>
+            SecretNotDecoded(s"could not decode ${failures.map(failure => CursorOp.opsToPath(failure.history)).distinct.mkString_(", ")}")
+          }
+      }
 }
 
 sealed trait Secret
@@ -98,3 +107,5 @@ object Secret {
 }
 
 case class NoSecretInResponseException(resource: SecretIdType) extends RuntimeException(resource.value)
+
+case class SecretNotDecoded(problem: String) extends RuntimeException(problem)
