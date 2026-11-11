@@ -18,7 +18,7 @@ import natchez.*
 import natchez.http4s.NatchezMiddleware
 import natchez.mtl.*
 import natchez.xray.{XRay, XRayEnvironment}
-import org.http4s.client.{Client, middleware}
+import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -34,7 +34,7 @@ class PostgresqlDatabaseInitHandler
     for {
       given Logger[F] <- Resource.eval(Slf4jLogger.create[F])
       given Random[F] <- Resource.eval(Random.scalaUtilRandom[F])
-      client <- httpClient[F]
+      client <- PostgresqlDatabaseInitHandler.httpClient[F]
       entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
         XRayEnvironment[F]
           .daemonAddress
@@ -74,12 +74,21 @@ class PostgresqlDatabaseInitHandler
    */
   private given [Event]: KernelSource[Event] = KernelSource.emptyKernelSource
 
-  private def httpClient[F[_] : {Async, Network, Trace}]: Resource[F, Client[F]] =
+}
+
+object PostgresqlDatabaseInitHandler {
+  private[init] def httpClient[F[_] : {Async, Network, Trace}]: Resource[F, Client[F]] =
     EmberClientBuilder
       .default[F]
       .build
-      .map(middleware.Logger[F](logHeaders = true, logBody = true))
-      .map(NatchezMiddleware.client(_))
+      .map(decorate)
+
+  /**
+   * The middleware the Lambda's HTTP client runs through, kept apart from building the client
+   * so tests can apply it to an in-memory client.
+   */
+  private[init] def decorate[F[_] : {MonadCancelThrow, Trace}](client: Client[F]): Client[F] =
+    NatchezMiddleware.client(client)
 
 }
 
