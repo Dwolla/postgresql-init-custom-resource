@@ -1,6 +1,7 @@
 package com.dwolla.postgres.init
 
 import cats.*
+import cats.data.Kleisli
 import cats.effect.{Trace as _, *}
 import cats.syntax.all.*
 import cats.tagless.aop.Aspect
@@ -33,6 +34,8 @@ object PostgresqlDatabaseInitHandlerImpl {
                                                userRepository: UserRepository[InSession[F, *]],
                                               )
                                               (using CreateSkunkSession[F]): PostgresqlDatabaseInitHandlerImpl[F] = new PostgresqlDatabaseInitHandlerImpl[F] {
+    private given [A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
+
     override def createResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
       handleCreateOrUpdate(event)(createOrUpdate(_, event)).map(HandlerResponse(_, None))
 
@@ -54,8 +57,9 @@ object PostgresqlDatabaseInitHandlerImpl {
         _ <- databaseRepository.grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin.failsAsStep(s"granting privileges in database ${input.name} to pgadmin")
         _ <- roleRepository.createRole(input.name).failsAsStep(s"creating the role for database ${input.name}")
         _ <- userPasswords.traverse { userPassword =>
-          (userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database))
-            .failsAsStep(s"creating or updating user ${userPassword.user}")
+          userRepository.addOrUpdateUser(userPassword).failsAsCredentialStep(s"creating or updating user ${userPassword.user}") >>
+            roleRepository.addUserToRole(userPassword.user, userPassword.database)
+              .failsAsStep(s"adding user ${userPassword.user} to the role for database ${userPassword.database}")
         }
       } yield ()
 

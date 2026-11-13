@@ -72,6 +72,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "com.dwolla" %% "dwolla-otel-natchez" % "0.2.11" % Test,
         "org.typelevel" %% "discipline-munit" % "2.0.0" % Test,
         "org.typelevel" %% "cats-laws" % "2.13.0" % Test,
+        "org.typelevel" %% "log4cats-testing" % "2.8.0" % Test,
       )
     },
     dependencyOverrides ++= Seq(
