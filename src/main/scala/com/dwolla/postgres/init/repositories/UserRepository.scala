@@ -95,6 +95,14 @@ object UserQueries {
     sql"SELECT u.usename FROM pg_catalog.pg_user u WHERE u.usename = $username"
       .query(username)
 
+  /*
+   * CREATE USER and ALTER USER take no bind parameters, so the SCRAM-SHA-256 verifier is part of
+   * the statement text. skunk records a command's text on its span, and when the command fails,
+   * skunk's exception message includes the text and the tracer attaches that exception to the
+   * spans it passes through. So the verifier reaches traces by design; the plain password never
+   * does. Logs leave it out because the handler reports this step's failures with
+   * failsAsCredentialStep.
+   */
   def createUser(username: Username,
                  verifier: ScramSha256Verifier): Command[Void] =
     sql"CREATE USER #${username.value.value} WITH PASSWORD '#${verifier.value}'"

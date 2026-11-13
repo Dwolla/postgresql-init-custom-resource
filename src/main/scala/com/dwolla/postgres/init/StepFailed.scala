@@ -83,6 +83,8 @@ object StepFailed {
      * Like `failsAsStep`, for a step whose statement carries credential material, such as a
      * password verifier. Only the step and the SQLSTATE are logged and traced: Postgres's
      * message, detail and hint can quote tokens from the statement, as a syntax error does.
+     * This keeps the statement's credential material out of logs only: the database driver
+     * records the statement text on its own span, so traces carry it by design.
      */
     def failsAsCredentialStep(step: => String)(using MonadThrow[F], Logger[F], Trace[F]): F[A] =
       reportedAs(fa, step, _ => Nil)
