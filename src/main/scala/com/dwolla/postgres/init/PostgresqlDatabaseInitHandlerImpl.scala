@@ -1,19 +1,19 @@
 package com.dwolla.postgres.init
 
 import cats.*
-import cats.effect.std.Console
+import cats.data.Kleisli
 import cats.effect.{Trace as _, *}
 import cats.syntax.all.*
 import cats.tagless.aop.Aspect
 import cats.tagless.{Derive, Trivial}
 import com.amazonaws.secretsmanager.{ResourceNotFoundException, SecretIdType}
+import com.dwolla.postgres.init.StepFailed.*
 import com.dwolla.postgres.init.aws.SecretsManagerAlg
 import com.dwolla.postgres.init.repositories.*
 import com.dwolla.postgres.init.repositories.CreateSkunkSession.*
 import com.dwolla.tracing.syntax.*
 import feral.lambda.INothing
 import feral.lambda.cloudformation.*
-import fs2.io.net.Network
 import natchez.*
 import org.typelevel.log4cats.Logger
 
@@ -28,11 +28,14 @@ object PostgresqlDatabaseInitHandlerImpl {
   private[PostgresqlDatabaseInitHandlerImpl] def databaseAsPhysicalResourceId[F[_] : ApplicativeThrow](db: Database): F[PhysicalResourceId] =
     PhysicalResourceId(db.value.value).liftTo[F](new RuntimeException("Database name was invalid as Physical Resource ID"))
 
-  def apply[F[_] : {Temporal, Trace, Network, Console, Logger}](secretsManagerAlg: SecretsManagerAlg[F],
-                                                                databaseRepository: DatabaseRepository[InSession[F, *]],
-                                                                roleRepository: RoleRepository[InSession[F, *]],
-                                                                userRepository: UserRepository[InSession[F, *]],
-                                                               ): PostgresqlDatabaseInitHandlerImpl[F] = new PostgresqlDatabaseInitHandlerImpl[F] {
+  def apply[F[_] : {Temporal, Trace, Logger}](secretsManagerAlg: SecretsManagerAlg[F],
+                                               databaseRepository: DatabaseRepository[InSession[F, *]],
+                                               roleRepository: RoleRepository[InSession[F, *]],
+                                               userRepository: UserRepository[InSession[F, *]],
+                                              )
+                                              (using CreateSkunkSession[F]): PostgresqlDatabaseInitHandlerImpl[F] = new PostgresqlDatabaseInitHandlerImpl[F] {
+    private given [A]: Logger[Kleisli[F, A, *]] = Logger[F].mapK(Kleisli.liftK)
+
     override def createResource(event: DatabaseMetadata): F[HandlerResponse[INothing]] =
       handleCreateOrUpdate(event)(createOrUpdate(_, event)).map(HandlerResponse(_, None))
 
@@ -43,15 +46,20 @@ object PostgresqlDatabaseInitHandlerImpl {
       for {
         usernames <- getUsernamesFromSecrets(event.secretIds, UserRepository.usernameForDatabase(event.name))
         dbId <- removeUsersFromDatabase(usernames, event.name).inSession(event.host, event.port, event.username, event.password)
+                  .failsAsStep(s"removing database ${event.name}")
       } yield HandlerResponse(dbId, None)
 
     private def databaseScopedCreateOrUpdateOperations(userPasswords: List[UserConnectionInfo], input: DatabaseMetadata): InSession[F, Unit] =
       for {
-        _ <- input.extensions.traverse(databaseRepository.createExtension)
-        _ <- databaseRepository.grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin
-        _ <- roleRepository.createRole(input.name)
+        _ <- input.extensions.traverse { extension =>
+          databaseRepository.createExtension(extension).failsAsStep(s"creating extension $extension in database ${input.name}")
+        }
+        _ <- databaseRepository.grantAllPrivilegesOnAllTablesInSchemaPublicToPgadmin.failsAsStep(s"granting privileges in database ${input.name} to pgadmin")
+        _ <- roleRepository.createRole(input.name).failsAsStep(s"creating the role for database ${input.name}")
         _ <- userPasswords.traverse { userPassword =>
-          userRepository.addOrUpdateUser(userPassword) >> roleRepository.addUserToRole(userPassword.user, userPassword.database)
+          userRepository.addOrUpdateUser(userPassword).failsAsCredentialStep(s"creating or updating user ${userPassword.user}") >>
+            roleRepository.addUserToRole(userPassword.user, userPassword.database)
+              .failsAsStep(s"adding user ${userPassword.user} to the role for database ${userPassword.database}")
         }
       } yield ()
 
@@ -59,13 +67,17 @@ object PostgresqlDatabaseInitHandlerImpl {
       for {
         db <- databaseAsPhysicalResourceId[F](input.name)
         scope <- databaseRepository.createDatabase(input).inSession(input.host, input.port, input.username, input.password)
+                   .failsAsStep(s"creating database ${input.name}")
         _ <- databaseScopedCreateOrUpdateOperations(userPasswords, input).inSession(input.host, input.port, input.username, input.password, scope)
+               .failsAsStep(s"configuring database ${input.name}")
       } yield db
 
     private def handleCreateOrUpdate(input: DatabaseMetadata)
                                     (f: List[UserConnectionInfo] => F[PhysicalResourceId]): F[PhysicalResourceId] =
       for {
-        userPasswords <- input.secretIds.traverse(secretsManagerAlg.getSecretAs[UserConnectionInfo])
+        userPasswords <- input.secretIds.traverse { secretId =>
+          secretsManagerAlg.getSecretAs[UserConnectionInfo](secretId).failsAsStep(s"reading secret ${secretId.value}")
+        }
         id <- f(userPasswords)
       } yield id
 
@@ -78,15 +90,18 @@ object PostgresqlDatabaseInitHandlerImpl {
               Logger[F].warn(ex)(s"could not retrieve secret ${secretId.value}, falling back to ${fallback.value}")
                 .as(fallback)
           }
+          .failsAsStep(s"reading secret ${secretId.value}")
       }
 
     private def removeUsersFromDatabase(usernames: List[Username], databaseName: Database): InSession[F, PhysicalResourceId] =
       for {
         db <- databaseAsPhysicalResourceId[InSession[F, *]](databaseName)
-        _ <- usernames.traverse(roleRepository.removeUserFromRole(_, databaseName))
-        _ <- databaseRepository.removeDatabase(databaseName)
-        _ <- roleRepository.removeRole(databaseName)
-        _ <- usernames.traverse(userRepository.removeUser)
+        _ <- usernames.traverse { username =>
+          roleRepository.removeUserFromRole(username, databaseName).failsAsStep(s"removing user $username from the role for database $databaseName")
+        }
+        _ <- databaseRepository.removeDatabase(databaseName).failsAsStep(s"dropping database $databaseName")
+        _ <- roleRepository.removeRole(databaseName).failsAsStep(s"dropping the role for database $databaseName")
+        _ <- usernames.traverse(username => userRepository.removeUser(username).failsAsStep(s"dropping user $username"))
       } yield db
   }.traceWithInputs
 }

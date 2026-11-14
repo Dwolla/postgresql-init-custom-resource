@@ -1,6 +1,6 @@
 package com.dwolla.postgres.init
 
-import cats.effect.std.{Console, Env, Random}
+import cats.effect.std.{Console, Env, Random, SecureRandom}
 import cats.effect.syntax.all.*
 import cats.effect.{Trace as _, *}
 import cats.mtl.Local
@@ -19,9 +19,11 @@ import natchez.http4s.NatchezMiddleware
 import natchez.mtl.*
 import natchez.xray.{XRay, XRayEnvironment}
 import org.http4s.client.Client
+import org.http4s.{Query, Uri}
 import org.http4s.ember.client.EmberClientBuilder
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.vault.Key
 import smithy4s.aws.kernel.AwsRegion
 import smithy4s.aws.{AwsClient, AwsEnvironment}
 
@@ -34,6 +36,7 @@ class PostgresqlDatabaseInitHandler
     for {
       given Logger[F] <- Resource.eval(Slf4jLogger.create[F])
       given Random[F] <- Resource.eval(Random.scalaUtilRandom[F])
+      given SecureRandom[F] <- SecureRandom.javaSecuritySecureRandom[F].toResource
       client <- PostgresqlDatabaseInitHandler.httpClient[F]
       entryPoint <- entryPointOverride.toOptionT[Resource[F, *]].getOrElseF {
         XRayEnvironment[F]
@@ -84,11 +87,22 @@ object PostgresqlDatabaseInitHandler {
       .map(decorate)
 
   /**
-   * The middleware the Lambda's HTTP client runs through, kept apart from building the client
-   * so tests can apply it to an in-memory client.
+   * The tracing middleware the Lambda's HTTP client runs through, kept apart from building the
+   * client so tests can apply it to an in-memory client. Each request's span records its URI
+   * without the query string; the request itself is sent with it.
    */
-  private[init] def decorate[F[_] : {MonadCancelThrow, Trace}](client: Client[F]): Client[F] =
-    NatchezMiddleware.client(client)
+  private[init] def decorate[F[_] : {MonadCancelThrow, Trace}](client: Client[F]): Client[F] = {
+    val sentToFullUri = Client[F] { req =>
+      client.run(req.attributes.lookup(fullUri).fold(req)(req.withUri))
+    }
+    val traced = NatchezMiddleware.client(sentToFullUri)
+
+    Client[F] { req =>
+      traced.run(req.withUri(req.uri.copy(query = Query.empty)).withAttribute(fullUri, req.uri))
+    }
+  }
+
+  private val fullUri: Key[Uri] = Key.newKey[SyncIO, Uri].unsafeRunSync()
 
 }
 
