@@ -49,7 +49,7 @@ lazy val `postgresql-init-core` = (project in file("."))
         "org.tpolecat" %% "natchez-xray" % natchezVersion,
         "org.tpolecat" %% "natchez-http4s" % "0.6.2",
         "org.typelevel" %% "cats-tagless-core" % "0.16.5",
-        "org.http4s" %% "http4s-ember-client" % "0.23.38",
+        "org.http4s" %% "http4s-ember-client" % "0.23.39",
         "io.circe" %% "circe-parser" % circeV,
         "io.circe" %% "circe-generic" % circeV,
         "io.circe" %% "circe-literal" % circeV,
@@ -76,7 +76,7 @@ lazy val `postgresql-init-core` = (project in file("."))
       )
     },
     dependencyOverrides ++= Seq(
-      "org.http4s" %% "http4s-circe" % "0.23.38",
+      "org.http4s" %% "http4s-circe" % "0.23.39",
       "io.circe" %% "circe-scodec" % circeV,
       "com.amazonaws" % "aws-lambda-java-core" % "1.4.1",
     ),
